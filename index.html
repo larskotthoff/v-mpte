@@ -9,18 +9,45 @@
         <style type="text/css"> 
 text {
   font: 10px sans;
+  fill: #222;
+  shape-rendering: crispEdges;
+  text-rendering: optimizeLegibility;
+}
+
+polygon.selectormin:hover,
+polygon.selectormax:hover {
+  fill: #f00;
 }
  
 rect {
   fill: white;
   fill-opacity: 0;
-  stroke: black;
-  stroke-width: .5;
+  stroke: #222;
+  shape-rendering: crispEdges;
 }
  
 line {
   stroke: #aaa;
   shape-rendering: crispEdges;
+}
+
+button {
+  shape-rendering: crispEdges;
+  text-rendering: optimizeLegibility;
+  background: none;
+  margin: 0;
+  border: 0;
+  min-width: 50px;
+  color: #222;
+  padding: 6px 10px 6px 10px;
+  border-radius: 5px;
+}
+
+button:hover {
+  background-color: #ccc;
+}
+button.active {
+  background-color: #aaa;
 }
         </style>
     </head>
@@ -55,8 +82,10 @@ line {
           <p/>
         </div>
         <script type="text/javascript">
-        var vis, data, min, max, w = 800, h = 600, bins = 40, delay = 1500,
+        var vis, data, min, max, w = 800, h = 400, bins = 40, delay = 1000,
             xscale, xinterval, yscale, histo, yoffset = 30, ymax,
+            minpre = 0, maxpre, maxmove = false,
+            yinterval = 200,
             months = [ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
                        "sep", "oct", "nov", "dec" ];
         color = d3.scale.linear().domain([
@@ -141,6 +170,12 @@ line {
                         (d.x + xinterval) + "l rain"});
         }
 
+        triangle = function(d) {
+            return xscale(d) + "," + (h - yoffset) + " "
+                    + (xscale(d) - 5) + "," + (h - yoffset + 10) + " "
+                    + (xscale(d) + 5) + "," + (h - yoffset + 10) + " ";
+        }
+
         d3.json("rain-ele.geojson", function(json) {
             data = json.features;
             accessor = function(m) {
@@ -172,17 +207,27 @@ line {
                 xs.push(i);
             }
             xs.push(max);
+            maxpre = max;
             xscale = d3.scale.ordinal()
                 .domain(xs).rangeRoundBands([0, w]);
             chart.append("svg:g").selectAll("text")
                 .data(xs)
                 .enter().append("svg:text")
                 .attr("class", "label")
+                .attr("x", function(d) { return xscale(d); })
+                .attr("y", function(d) { return d % (2*xinterval) ? h : h - yoffset + 20; })
                 .attr("text-anchor", "middle")
-                .attr("transform", function (d) {
-                    return "translate(" + xscale(d) + "," + (h - yoffset/2) + ")rotate(45)";
-                })
                 .text(function(d) { return d; });
+            chart.append("svg:text")
+                .attr("class", "label")
+                .attr("x", w)
+                .attr("y", max % (2*xinterval) ? h - yoffset/2 : h)
+                .attr("text-anchor", "end")
+                .style("font-weight", "bold")
+                .text("l/m")
+                .append("svg:tspan")
+                .attr("baseline-shift", "super")
+                .text("2");
 
             histo = d3.layout.histogram().range([min, max]).bins(bins);
 
@@ -191,20 +236,20 @@ line {
                         return d3.max(hist, function(d) { return d.y });
             }));
             ys = [];
-            yinterval = 100;
-            for(i = yinterval; i < ymax; i += yinterval) {
+            for(i = 0; i < ymax; i += yinterval) {
                 ys.push(i);
             }
-            yscale = d3.scale.linear().domain([0, ymax]).range([0, h - yoffset]);
+            yscale = d3.scale.linear().domain([0, ymax]).range([0, h - yoffset - 10]);
             yaxis = chart.append("svg:g");
             yaxis.selectAll("text")
                 .data(ys)
                 .enter().append("svg:text")
                 .attr("class", "label")
                 .attr("x", xscale(max))
-                .attr("dy", function(d) { return h - yscale(d) - yoffset - 3; })
+                .attr("y", function(d) { return h - yscale(d) - yoffset - 3; })
                 .attr("text-anchor", "end")
-                .text(function(d) { return d; });
+                .style("font-weight", function(d) { return d > 0 ? "normal" : "bold"; })
+                .text(function(d) { return d > 0 ? d : "# sites"; });
             yaxis.selectAll("line")
                 .data(ys)
                 .enter().append("svg:line")
@@ -213,14 +258,37 @@ line {
                 .attr("y1", function(d) { return h - yscale(d) - yoffset; })
                 .attr("y2", function(d) { return h - yscale(d) - yoffset; });
 
+            selectors = chart.append("svg:g");
+            selectors.append("svg:polygon")
+                .attr("class", "selectormin")
+                .attr("points", triangle(minpre));
+            smax = selectors.append("svg:polygon")
+                .attr("class", "selectormax")
+                .attr("points", triangle(maxpre));
+            chart.on("mousedown", function(d, i) {
+                        if(d3.select(this) == smax) {
+                            maxmove = true;
+                        }
+                    })
+                 .on("mouseup", function(d, i) {
+                         if(maxmove) {
+                            maxmove = false;
+                        }
+                    });
+
             vis = chart.append("svg:g");
             mkGraph(accessor("jan"));
 
             $.each(months, function(i, m) {
                 d3.select("#" + m).on("click", function() {
                     updateGraph(accessor(m));
+                    $.each(months, function(i, m) {
+                        $("#" + m).removeClass("active");
+                    });
+                    $("#" + m).addClass("active");
                 });
             });
+            $("#jan").addClass("active");
         });
         /*
         var path = d3.geo.path();
