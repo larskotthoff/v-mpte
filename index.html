@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Precipitation at Maya sites</title>
+        <script type="text/javascript" src="https://raw.github.com/mbostock/d3/master/d3.min.js"></script>
+        <script type="text/javascript" src="https://raw.github.com/mbostock/d3/master/d3.geo.min.js"></script>
+        <script type="text/javascript" src="https://raw.github.com/mbostock/d3/master/d3.layout.min.js"></script>
+        <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.2.min.js"></script>
+        <style type="text/css"> 
+text {
+  font: 10px sans;
+}
+ 
+rect {
+  fill: white;
+  fill-opacity: 0;
+  stroke: black;
+  stroke-width: .5;
+}
+ 
+line {
+  stroke: #aaa;
+  shape-rendering: crispEdges;
+}
+        </style>
+    </head>
+
+    <body>
+        <div id='chart'>
+          <button class='active' id='jan'>
+            January
+          </button><button class='inactive' id='feb'>
+            February
+          </button><button class='inactive' id='mar'>
+            March
+          </button><button class='inactive' id='apr'>
+            April
+          </button><button class='inactive' id='may'>
+            May
+          </button><button class='inactive' id='jun'>
+            June
+          </button><button class='inactive' id='jul'>
+            July
+          </button><button class='inactive' id='aug'>
+            August
+          </button><button class='inactive' id='sep'>
+            September
+          </button><button class='inactive' id='oct'>
+            October
+          </button><button class='inactive' id='nov'>
+            November
+          </button><button class='inactive' id='dec'>
+            December
+          </button>
+          <p/>
+        </div>
+        <script type="text/javascript">
+        var vis, data, min, max, w = 800, h = 600, bins = 40, delay = 1500,
+            xscale, xinterval, yscale, histo, yoffset = 30, ymax,
+            months = [ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
+                       "sep", "oct", "nov", "dec" ];
+        color = d3.scale.linear().domain([
+              -32768, 0, 100, 1000, 2000, 3000
+            ]).range([
+              "rgb(30, 120, 30)",
+              "rgb(30, 120, 30)",
+              "rgb(125, 125, 35)",
+              "rgb(100, 25, 25)",
+              "rgb(200, 200, 200)",
+              "rgb(255, 255, 255)"
+           ]);
+        bar = function() {
+            this.attr("x", function(d) { return xscale(d.x); })
+                .attr("y", function(d) { return h - yscale(d.y) - yoffset; })
+                .attr("width", xscale.rangeBand())
+                .attr("height", function(d) { return yscale(d.y); });
+        }
+        profile = function() {
+            this.attr("x1", function(d) { return xscale(d.x); })
+                .attr("x2", function(d) {
+                        return xscale(d.x) + xscale.rangeBand(); })
+                .attr("y1", function(d) { return h - yscale(d.y) - yoffset; })
+                .attr("y2", function(d) { return h - yscale(d.y) - yoffset; })
+                .style("stroke", function(d) { return color(d.elevation); });
+        }
+        profileStrokes = function(hist) {
+            every = Math.round(ymax/h);
+            return $.map(hist, function(h, i) {
+                    cur = 1;
+                    vals = $.map(h, function(d, j) {
+                            if(cur == 1) {
+                                o = new Object;
+                                o.x = h.x;
+                                o.elevation = d.properties.elevation;
+                                cur = every;
+                                return o;
+                            } else {
+                                cur--;
+                                return null;
+                            }
+                        });
+                    vals.sort(function(a, b) {
+                            return a.elevation - b.elevation;
+                        });
+                    return vals.map(function(d, j) {
+                            d.y = (j + 1) * every;
+                            return d;
+                        });
+                });
+        }
+        mkGraph = function(accessor) {
+            hist = histo.value(accessor)(data);
+
+            vis.selectAll("line")
+                .data(profileStrokes(hist))
+                .enter().append("svg:line").call(profile);
+            vis.selectAll("rect")
+                .data(hist)
+                .enter().append("svg:rect").call(bar)
+                .append("svg:title")
+                .text(function(d) { return d.y + " sites with " + d.x + "l - " +
+                        (d.x + xinterval) + "l rain"});
+             
+        }
+        updateGraph = function(accessor) {
+            hist = histo.value(accessor)(data);
+             
+            vis.selectAll("line").remove();
+            vis.selectAll("line")
+                .data(profileStrokes(hist))
+                .enter().insert("svg:line", "rect")
+                .transition()
+                .delay(delay)
+                .call(profile);
+            vis.selectAll("rect").data(hist)
+                .transition()
+                .duration(delay)
+                .call(bar)
+                .select("title")
+                .text(function(d) { return d.y + " sites with " + d.x + "l - " +
+                        (d.x + xinterval) + "l rain"});
+        }
+
+        d3.json("rain-ele.geojson", function(json) {
+            data = json.features;
+            accessor = function(m) {
+                return function(d) {
+                    return d.properties["rain-" + m];
+                }
+            }
+
+            allvals = $.map(json.features, function(d, i) {
+                return $.map(months, function(m, j) {
+                    return accessor(m)(d);
+                });
+            });
+            min = d3.min(allvals);
+            max = d3.max(allvals);
+            tmp = Math.pow(10, ('' + max).length - 1);
+            tmpmax = 0;
+            while(tmpmax < max) {
+                tmpmax += tmp;
+            }
+            max = tmpmax;
+             
+            chart = d3.select("#chart").append("svg:svg")
+                .attr("width", w)
+                .attr("height", h);
+            xs = [];
+            xinterval = (max - min) / bins;
+            for(i = min; i < max; i += xinterval) {
+                xs.push(i);
+            }
+            xs.push(max);
+            xscale = d3.scale.ordinal()
+                .domain(xs).rangeRoundBands([0, w]);
+            chart.append("svg:g").selectAll("text")
+                .data(xs)
+                .enter().append("svg:text")
+                .attr("class", "label")
+                .attr("text-anchor", "middle")
+                .attr("transform", function (d) {
+                    return "translate(" + xscale(d) + "," + (h - yoffset/2) + ")rotate(45)";
+                })
+                .text(function(d) { return d; });
+
+            histo = d3.layout.histogram().range([min, max]).bins(bins);
+
+            ymax = d3.max($.map(months, function(m, i) {
+                        hist = histo.value(accessor(m))(data);
+                        return d3.max(hist, function(d) { return d.y });
+            }));
+            ys = [];
+            yinterval = 100;
+            for(i = yinterval; i < ymax; i += yinterval) {
+                ys.push(i);
+            }
+            yscale = d3.scale.linear().domain([0, ymax]).range([0, h - yoffset]);
+            yaxis = chart.append("svg:g");
+            yaxis.selectAll("text")
+                .data(ys)
+                .enter().append("svg:text")
+                .attr("class", "label")
+                .attr("x", xscale(max))
+                .attr("dy", function(d) { return h - yscale(d) - yoffset - 3; })
+                .attr("text-anchor", "end")
+                .text(function(d) { return d; });
+            yaxis.selectAll("line")
+                .data(ys)
+                .enter().append("svg:line")
+                .attr("x1", xscale(min))
+                .attr("x2", xscale(max))
+                .attr("y1", function(d) { return h - yscale(d) - yoffset; })
+                .attr("y2", function(d) { return h - yscale(d) - yoffset; });
+
+            vis = chart.append("svg:g");
+            mkGraph(accessor("jan"));
+
+            $.each(months, function(i, m) {
+                d3.select("#" + m).on("click", function() {
+                    updateGraph(accessor(m));
+                });
+            });
+        });
+        /*
+        var path = d3.geo.path();
+
+        var svg = d3.select("body")
+          .append("svg:svg");
+
+        d3.json("rain-ele.geojson", function(json) {
+            svg.selectAll("path")
+                .data(json.features)
+                .enter().append("svg:path")
+                .attr("radius", function(f, i) { return 6 - f.rank; })
+                .attr("d", path);
+        });
+        */
+        </script>
+    </body>
+</html>
