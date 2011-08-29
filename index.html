@@ -262,21 +262,21 @@ button.active {
             selectors.append("svg:polygon")
                 .attr("class", "selectormin")
                 .attr("points", triangle(minpre));
-            selectors.append("svg:polygon")
+            smax = selectors.append("svg:polygon")
                 .attr("class", "selectormax")
                 .attr("points", triangle(maxpre))
-                .on("mousemove", function(d, i) {
-                        if(maxmove) {
-                            maxpre = d3.min([max, d3.event.clientX]);
-                            d3.select(this).attr("points", triangle(maxpre));
-                        }
-                    })
                 .on("mousedown", function(d, i) {
                         maxmove = true;
-                    })
-                .on("mouseup", function(d, i) {
+                    });
+            d3.select(document).on("mouseup", function(d, i) {
                         maxmove = false;
-                   });
+                   })
+            chart.on("mousemove", function(d, i) {
+                        if(maxmove) {
+                            maxpre = d3.event.clientX - (d3.event.clientX % (xscale.rangeBand() + 1));
+                            smax.attr("points", triangle(maxpre));
+                        }
+                    });
 
             vis = chart.append("svg:g");
             mkGraph(accessor("jan"));
