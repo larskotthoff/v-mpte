@@ -84,7 +84,7 @@ button.active {
         <script type="text/javascript">
         var vis, data, min, max, w = 800, h = 400, bins = 40, delay = 1000,
             xscale, xinterval, yscale, histo, yoffset = 30, ymax,
-            minpre = 0, maxpre, maxmove = false,
+            minpre = 0, maxpre, maxmove = false, minmove = false,
             yinterval = 200,
             months = [ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
                        "sep", "oct", "nov", "dec" ];
@@ -262,19 +262,21 @@ button.active {
             selectors.append("svg:polygon")
                 .attr("class", "selectormin")
                 .attr("points", triangle(minpre));
-            smax = selectors.append("svg:polygon")
+            selectors.append("svg:polygon")
                 .attr("class", "selectormax")
-                .attr("points", triangle(maxpre));
-            chart.on("mousedown", function(d, i) {
-                        if(d3.select(this) == smax) {
-                            maxmove = true;
+                .attr("points", triangle(maxpre))
+                .on("mousemove", function(d, i) {
+                        if(maxmove) {
+                            maxpre = d3.min([max, d3.event.clientX]);
+                            d3.select(this).attr("points", triangle(maxpre));
                         }
                     })
-                 .on("mouseup", function(d, i) {
-                         if(maxmove) {
-                            maxmove = false;
-                        }
-                    });
+                .on("mousedown", function(d, i) {
+                        maxmove = true;
+                    })
+                .on("mouseup", function(d, i) {
+                        maxmove = false;
+                   });
 
             vis = chart.append("svg:g");
             mkGraph(accessor("jan"));
