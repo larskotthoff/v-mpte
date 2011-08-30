@@ -80,10 +80,10 @@ button.active {
           <p/>
         </div>
         <script type="text/javascript">
-        var vis, data, min, max, w = 800, h = 400, bins = 40, delay = 1000,
-            xscale, xinterval, yscale, histo, yoffset = 30, ymax,
+        var vis, data, min, max, rainw = 800, elew = 200, h = 400, bins = 40,
+            delay = 1000, xscale, xinterval, yscale, histo, yoffset = 30, ymax,
             minpre = 0, maxpre, maxmove = false, minmove = false, defs,
-            yinterval = 200,
+            yinterval = 200, eles = [0, 100, 1000, 2000, 3000],
             months = [ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
                        "sep", "oct", "nov", "dec" ],
             curmonth = months[0];
@@ -142,11 +142,11 @@ button.active {
             hist = histo.value(accessor(curmonth))(data);
 
             // for some reason d3 won't select "linearGradient"
-            defs.selectAll(".gradient")
+            defs.selectAll(".bargradient")
                 .data(hist)
                 .enter().append("svg:linearGradient")
                 .attr("id", function(d) { return "grad" + d.x; })
-                .attr("class", "gradient")
+                .attr("class", "bargradient")
                 .attr("x1", "100%")
                 .attr("x2", "100%")
                 .attr("y1", "100%")
@@ -164,7 +164,7 @@ button.active {
         updateGraph = function() {
             hist = histo.value(accessor(curmonth))(data);
              
-            defs.selectAll(".gradient")
+            defs.selectAll(".bargradient")
                 .data(hist)
                 .call(profileGrad);
             vis.selectAll("rect").data(hist)
@@ -205,7 +205,7 @@ button.active {
             max = tmpmax;
              
             chart = d3.select("#chart").append("svg:svg")
-                .attr("width", w)
+                .attr("width", rainw + elew)
                 .attr("height", h);
             defs = chart.append("svg:defs");
             xs = [];
@@ -216,7 +216,8 @@ button.active {
             xs.push(max);
             maxpre = max;
             xscale = d3.scale.ordinal()
-                .domain(xs).rangeRoundBands([0, w]);
+                .domain(xs).rangeRoundBands([0, rainw]);
+            // x axis labels
             chart.append("svg:g").selectAll("text")
                 .data(xs)
                 .enter().append("svg:text")
@@ -227,7 +228,7 @@ button.active {
                 .text(function(d) { return d; });
             chart.append("svg:text")
                 .attr("class", "label")
-                .attr("x", w)
+                .attr("x", rainw)
                 .attr("y", max % (2*xinterval) ? h - yoffset/2 : h)
                 .attr("text-anchor", "end")
                 .style("font-weight", "bold")
@@ -247,6 +248,7 @@ button.active {
                 ys.push(i);
             }
             yscale = d3.scale.linear().domain([0, ymax]).range([0, h - yoffset - 10]);
+            // y axis lines and labels
             yaxis = chart.append("svg:g");
             yaxis.selectAll("text")
                 .data(ys)
@@ -265,6 +267,37 @@ button.active {
                 .attr("y1", function(d) { return h - yscale(d) - yoffset; })
                 .attr("y2", function(d) { return h - yscale(d) - yoffset; });
 
+            // profile scale
+            defs.append("svg:linearGradient")
+                .attr("id", "elescale")
+                .attr("x1", "100%")
+                .attr("x2", "100%")
+                .attr("y1", "100%")
+                .attr("y2", "0%")
+                .attr("spreadMethod", "pad")
+                .selectAll("stop").data(eles).enter().append("svg:stop")
+                .attr("offset", function(d) { return d / eles[eles.length-1]; })
+                .attr("stop-color", function(d) { return color(d); });
+
+            profscale = chart.append("svg:g");
+            profscale.append("svg:rect")
+                .attr("x", rainw + 100)
+                .attr("width", elew - 150)
+                .attr("y", yoffset)
+                .attr("height", h - 2 * yoffset)
+                .attr("fill", "url(#elescale)");
+            profscale.selectAll("text")
+                .data(eles)
+                .enter().append("svg:text")
+                .attr("class", "label")
+                .attr("x", rainw + elew - 40)
+                .attr("y", function(d) {
+                        return h - (h - 2 * yoffset) * d / eles[eles.length-1] - yoffset + 5;
+                    })
+                .attr("text-anchor", "start")
+                .text(function(d) { return d + "m"; });
+
+            // selectors
             selectors = chart.append("svg:g");
             smin = selectors.append("svg:polygon")
                 .attr("class", "selectormin")
