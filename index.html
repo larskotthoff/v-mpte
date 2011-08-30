@@ -20,8 +20,6 @@ polygon.selectormax:hover {
 }
  
 rect {
-  fill: white;
-  fill-opacity: 0;
   stroke: #222;
   shape-rendering: crispEdges;
 }
@@ -84,7 +82,7 @@ button.active {
         <script type="text/javascript">
         var vis, data, min, max, w = 800, h = 400, bins = 40, delay = 1000,
             xscale, xinterval, yscale, histo, yoffset = 30, ymax,
-            minpre = 0, maxpre, maxmove = false, minmove = false,
+            minpre = 0, maxpre, maxmove = false, minmove = false, defs,
             yinterval = 200,
             months = [ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
                        "sep", "oct", "nov", "dec" ];
@@ -101,48 +99,56 @@ button.active {
         bar = function() {
             this.attr("x", function(d) { return xscale(d.x); })
                 .attr("y", function(d) { return h - yscale(d.y) - yoffset; })
+                .attr("fill", function(d) { return "url(#grad" + d.x + ")"; })
                 .attr("width", xscale.rangeBand())
                 .attr("height", function(d) { return yscale(d.y); });
         }
-        profile = function() {
-            this.attr("x1", function(d) { return xscale(d.x); })
-                .attr("x2", function(d) {
-                        return xscale(d.x) + xscale.rangeBand(); })
-                .attr("y1", function(d) { return h - yscale(d.y) - yoffset; })
-                .attr("y2", function(d) { return h - yscale(d.y) - yoffset; })
-                .style("stroke", function(d) { return color(d.elevation); });
+        profileGrad = function() {
+            this.selectAll("stop").remove();
+            this.selectAll("stop").data(function(d) { return profileStops(d); })
+                .enter()
+                .append("svg:stop")
+                .attr("offset", function(e) { return e.y + "%"; })
+                .attr("stop-color", function(e) { return color(e.elevation); });
         }
-        profileStrokes = function(hist) {
+        profileStops = function(data) {
             every = Math.round(ymax/h);
-            return $.map(hist, function(h, i) {
-                    cur = 1;
-                    vals = $.map(h, function(d, j) {
-                            if(cur == 1) {
-                                o = new Object;
-                                o.x = h.x;
-                                o.elevation = d.properties.elevation;
-                                cur = every;
-                                return o;
-                            } else {
-                                cur--;
-                                return null;
-                            }
-                        });
-                    vals.sort(function(a, b) {
-                            return a.elevation - b.elevation;
-                        });
-                    return vals.map(function(d, j) {
-                            d.y = (j + 1) * every;
-                            return d;
-                        });
+            cur = 1;
+            vals = $.map(data, function(d, j) {
+                    if(cur == 1) {
+                        o = new Object;
+                        o.x = h.x;
+                        o.elevation = d.properties.elevation;
+                        cur = every;
+                        return o;
+                    } else {
+                        cur--;
+                        return null;
+                    }
+                });
+            vals.sort(function(a, b) {
+                    return a.elevation - b.elevation;
+                });
+            return vals.map(function(d, j) {
+                    d.y = j / (vals.length - 1) * 100;
+                    return d;
                 });
         }
         mkGraph = function(accessor) {
             hist = histo.value(accessor)(data);
 
-            vis.selectAll("line")
-                .data(profileStrokes(hist))
-                .enter().append("svg:line").call(profile);
+            // for some reason d3 won't select "linearGradient"
+            defs.selectAll(".gradient")
+                .data(hist)
+                .enter().append("svg:linearGradient")
+                .attr("id", function(d) { return "grad" + d.x; })
+                .attr("class", "gradient")
+                .attr("x1", "100%")
+                .attr("x2", "100%")
+                .attr("y1", "100%")
+                .attr("y2", "0%")
+                .attr("spreadMethod", "pad")
+                .call(profileGrad);
             vis.selectAll("rect")
                 .data(hist)
                 .enter().append("svg:rect").call(bar)
@@ -154,13 +160,9 @@ button.active {
         updateGraph = function(accessor) {
             hist = histo.value(accessor)(data);
              
-            vis.selectAll("line").remove();
-            vis.selectAll("line")
-                .data(profileStrokes(hist))
-                .enter().insert("svg:line", "rect")
-                .transition()
-                .delay(delay)
-                .call(profile);
+            defs.selectAll(".gradient")
+                .data(hist)
+                .call(profileGrad);
             vis.selectAll("rect").data(hist)
                 .transition()
                 .duration(delay)
@@ -201,6 +203,7 @@ button.active {
             chart = d3.select("#chart").append("svg:svg")
                 .attr("width", w)
                 .attr("height", h);
+            defs = chart.append("svg:defs");
             xs = [];
             xinterval = (max - min) / bins;
             for(i = min; i < max; i += xinterval) {
