@@ -85,7 +85,8 @@ button.active {
             minpre = 0, maxpre, maxmove = false, minmove = false, defs,
             yinterval = 200,
             months = [ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
-                       "sep", "oct", "nov", "dec" ];
+                       "sep", "oct", "nov", "dec" ],
+            curmonth = months[0];
         color = d3.scale.linear().domain([
               -32768, 0, 100, 1000, 2000, 3000
             ]).range([
@@ -100,6 +101,9 @@ button.active {
             this.attr("x", function(d) { return xscale(d.x); })
                 .attr("y", function(d) { return h - yscale(d.y) - yoffset; })
                 .attr("fill", function(d) { return "url(#grad" + d.x + ")"; })
+                .attr("fill-opacity", function(d) {
+                        return d.x >= minpre && d.x < maxpre ? 1 : 0.3;
+                    })
                 .attr("width", xscale.rangeBand())
                 .attr("height", function(d) { return yscale(d.y); });
         }
@@ -108,7 +112,7 @@ button.active {
             this.selectAll("stop").data(function(d) { return profileStops(d); })
                 .enter()
                 .append("svg:stop")
-                .attr("offset", function(e) { return e.y + "%"; })
+                .attr("offset", function(e) { return e.y; })
                 .attr("stop-color", function(e) { return color(e.elevation); });
         }
         profileStops = function(data) {
@@ -130,12 +134,12 @@ button.active {
                     return a.elevation - b.elevation;
                 });
             return vals.map(function(d, j) {
-                    d.y = j / (vals.length - 1) * 100;
+                    d.y = j / (vals.length - 1);
                     return d;
                 });
         }
-        mkGraph = function(accessor) {
-            hist = histo.value(accessor)(data);
+        mkGraph = function() {
+            hist = histo.value(accessor(curmonth))(data);
 
             // for some reason d3 won't select "linearGradient"
             defs.selectAll(".gradient")
@@ -157,8 +161,8 @@ button.active {
                         (d.x + xinterval) + "l rain"});
              
         }
-        updateGraph = function(accessor) {
-            hist = histo.value(accessor)(data);
+        updateGraph = function() {
+            hist = histo.value(accessor(curmonth))(data);
              
             defs.selectAll(".gradient")
                 .data(hist)
@@ -262,38 +266,52 @@ button.active {
                 .attr("y2", function(d) { return h - yscale(d) - yoffset; });
 
             selectors = chart.append("svg:g");
-            selectors.append("svg:polygon")
+            smin = selectors.append("svg:polygon")
                 .attr("class", "selectormin")
-                .attr("points", triangle(minpre));
+                .attr("points", triangle(minpre))
+                .on("mousedown", function(d, i) {
+                    minmove = true;
+                });
             smax = selectors.append("svg:polygon")
                 .attr("class", "selectormax")
                 .attr("points", triangle(maxpre))
                 .on("mousedown", function(d, i) {
-                        maxmove = true;
-                    });
+                    maxmove = true;
+                });
             d3.select(document).on("mouseup", function(d, i) {
-                        maxmove = false;
-                   })
+                    if(maxmove || minmove) {
+                        updateGraph();
+                    }
+                    maxmove = false;
+                    minmove = false;
+               })
             chart.on("mousemove", function(d, i) {
-                        if(maxmove) {
-                            maxpre = d3.event.clientX - (d3.event.clientX % (xscale.rangeBand() + 1));
-                            smax.attr("points", triangle(maxpre));
-                        }
-                    });
+                    tmp = d3.event.pageX / (xscale.rangeBand() + 1);
+                    xpos = Math.round(tmp) * (xscale.rangeBand() + 1);
+                    if(maxmove && xpos > minpre) {
+                        maxpre = xpos;
+                        smax.attr("points", triangle(maxpre));
+                    }
+                    if(minmove && xpos < maxpre) {
+                        minpre = xpos;
+                        smin.attr("points", triangle(minpre));
+                    }
+                });
 
             vis = chart.append("svg:g");
-            mkGraph(accessor("jan"));
+            mkGraph();
 
             $.each(months, function(i, m) {
                 d3.select("#" + m).on("click", function() {
-                    updateGraph(accessor(m));
+                    curmonth = m;
+                    updateGraph();
                     $.each(months, function(i, m) {
                         $("#" + m).removeClass("active");
                     });
                     $("#" + m).addClass("active");
                 });
             });
-            $("#jan").addClass("active");
+            $("#" + curmonth).addClass("active");
         });
         /*
         var path = d3.geo.path();
