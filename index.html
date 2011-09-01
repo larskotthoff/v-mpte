@@ -81,9 +81,9 @@ button.active {
         </div>
         <script type="text/javascript">
         var vis, data, min, max, rainw = 800, elew = 200, h = 400, bins = 40,
-            delay = 1000, xscale, xinterval, yscale, histo, yoffset = 30, ymax,
+            delay = 1000, xscale, xinterval, histo, yoffset = 30, yaxis,
             minpre = 0, maxpre, maxmove = false, minmove = false, defs,
-            yinterval = 200, eles = [0, 100, 1000, 2000, 3000],
+            eles = [0, 100, 1000, 2000, 3000],
             months = [ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
                        "sep", "oct", "nov", "dec" ],
             curmonth = months[0];
@@ -116,7 +116,7 @@ button.active {
                 .attr("stop-color", function(e) { return color(e.elevation); });
         }
         profileStops = function(data) {
-            every = Math.round(ymax/h);
+            every = 5;
             cur = 1;
             vals = $.map(data, function(d, j) {
                     if(cur == 1) {
@@ -138,9 +138,32 @@ button.active {
                     return d;
                 });
         }
+        mkYaxis = function() {
+            this.append("svg:text").attr("class", "label")
+                .attr("x", xscale(max))
+                .attr("y", function(d) { return h - yscale(d) - yoffset - 3; })
+                .attr("text-anchor", "end")
+                .text(yscale.tickFormat(10));
+            this.append("svg:line").attr("x1", xscale(min))
+                .attr("x2", xscale(max))
+                .attr("y1", function(d) { return h - yscale(d) - yoffset; })
+                .attr("y2", function(d) { return h - yscale(d) - yoffset; });
+        }
+        upYaxis = function() {
+            this.select("text")
+                .attr("y", function(d) { return h - yscale(d) - yoffset - 3; })
+                .text(yscale.tickFormat(10));
+            this.select("line")
+                .attr("y1", function(d) { return h - yscale(d) - yoffset; })
+                .attr("y2", function(d) { return h - yscale(d) - yoffset; });
+        }
         mkGraph = function() {
             hist = histo.value(accessor(curmonth))(data);
-
+            yscale = d3.scale.linear()
+                .domain([0, d3.max(hist, function(d) { return d.y })])
+                .range([0, h - yoffset - 10]);
+            yaxis.selectAll("g").data(yscale.ticks(10)).enter()
+                .append("svg:g").call(mkYaxis);
             // for some reason d3 won't select "linearGradient"
             defs.selectAll(".bargradient")
                 .data(hist)
@@ -159,10 +182,17 @@ button.active {
                 .append("svg:title")
                 .text(function(d) { return d.y + " sites with " + d.x + "l - " +
                         (d.x + xinterval) + "l rain"});
-             
         }
         updateGraph = function() {
             hist = histo.value(accessor(curmonth))(data);
+            yscale = d3.scale.linear()
+                .domain([0, d3.max(hist, function(d) { return d.y })])
+                .range([0, h - yoffset - 10]);
+            s = yaxis.selectAll("g").data(yscale.ticks(10));
+            s.exit().remove();
+            s.transition().duration(delay).call(upYaxis);
+            s.enter().append("svg:g").call(mkYaxis)
+                .transition().duration(delay);
              
             defs.selectAll(".bargradient")
                 .data(hist)
@@ -215,12 +245,13 @@ button.active {
             }
             xs.push(max);
             maxpre = max;
-            xscale = d3.scale.ordinal()
-                .domain(xs).rangeRoundBands([0, rainw]);
+            xscale = d3.scale.ordinal().domain(xs).rangeRoundBands([0, rainw]);
             // x axis labels
-            chart.append("svg:g").selectAll("text")
+            xaxis = chart.selectAll("g.xaxis")
                 .data(xs)
-                .enter().append("svg:text")
+                .enter().append("svg:g")
+                .attr("class", "xaxis");
+            xaxis.append("svg:text")
                 .attr("class", "label")
                 .attr("x", function(d) { return xscale(d); })
                 .attr("y", function(d) { return d % (2*xinterval) ? h : h - yoffset + 20; })
@@ -239,34 +270,7 @@ button.active {
 
             histo = d3.layout.histogram().range([min, max]).bins(bins);
 
-            ymax = d3.max($.map(months, function(m, i) {
-                        hist = histo.value(accessor(m))(data);
-                        return d3.max(hist, function(d) { return d.y });
-            }));
-            ys = [];
-            for(i = 0; i < ymax; i += yinterval) {
-                ys.push(i);
-            }
-            yscale = d3.scale.linear().domain([0, ymax]).range([0, h - yoffset - 10]);
-            // y axis lines and labels
-            yaxis = chart.append("svg:g");
-            yaxis.selectAll("text")
-                .data(ys)
-                .enter().append("svg:text")
-                .attr("class", "label")
-                .attr("x", xscale(max))
-                .attr("y", function(d) { return h - yscale(d) - yoffset - 3; })
-                .attr("text-anchor", "end")
-                .style("font-weight", function(d) { return d > 0 ? "normal" : "bold"; })
-                .text(function(d) { return d > 0 ? d : "# sites"; });
-            yaxis.selectAll("line")
-                .data(ys)
-                .enter().append("svg:line")
-                .attr("x1", xscale(min))
-                .attr("x2", xscale(max))
-                .attr("y1", function(d) { return h - yscale(d) - yoffset; })
-                .attr("y2", function(d) { return h - yscale(d) - yoffset; });
-
+            yaxis = chart.append("svg:g").attr("class", "yaxis");
             // profile scale
             defs.append("svg:linearGradient")
                 .attr("id", "elescale")
@@ -279,23 +283,25 @@ button.active {
                 .attr("offset", function(d) { return d / eles[eles.length-1]; })
                 .attr("stop-color", function(d) { return color(d); });
 
-            profscale = chart.append("svg:g");
-            profscale.append("svg:rect")
+            profscale = d3.scale.linear().domain([eles[0], eles[eles.length-1]])
+                .range([0, h - 2 * yoffset]);
+            proflabels = chart.append("svg:g");
+            proflabels.append("svg:rect")
                 .attr("x", rainw + 100)
                 .attr("width", elew - 150)
                 .attr("y", yoffset)
                 .attr("height", h - 2 * yoffset)
                 .attr("fill", "url(#elescale)");
-            profscale.selectAll("text")
-                .data(eles)
+            proflabels.selectAll("text")
+                .data(profscale.ticks(10))
                 .enter().append("svg:text")
                 .attr("class", "label")
                 .attr("x", rainw + elew - 40)
                 .attr("y", function(d) {
-                        return h - (h - 2 * yoffset) * d / eles[eles.length-1] - yoffset + 5;
+                        return h - profscale(d) - yoffset + 5;
                     })
                 .attr("text-anchor", "start")
-                .text(function(d) { return d + "m"; });
+                .text(profscale.tickFormat(10));
 
             // selectors
             selectors = chart.append("svg:g");
