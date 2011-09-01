@@ -159,6 +159,10 @@ button.active {
             this.select("text").call(ylabel);
             this.select("line").call(yline);
         }
+        barlabel = function() {
+            this.text(function(d) { return d.y + " sites with " + d.x + "l - " +
+                        (d.x + xinterval) + "l rain"});
+        }
         mkGraph = function() {
             hist = histo.value(accessor(curmonth))(data);
             yscale = d3.scale.linear()
@@ -182,8 +186,7 @@ button.active {
                 .data(hist)
                 .enter().append("svg:rect").call(bar)
                 .append("svg:title")
-                .text(function(d) { return d.y + " sites with " + d.x + "l - " +
-                        (d.x + xinterval) + "l rain"});
+                .call(barlabel);
         }
         updateGraph = function() {
             hist = histo.value(accessor(curmonth))(data);
@@ -204,8 +207,7 @@ button.active {
                 .duration(delay)
                 .call(bar)
                 .select("title")
-                .text(function(d) { return d.y + " sites with " + d.x + "l - " +
-                        (d.x + xinterval) + "l rain"});
+                .call(barlabel);
         }
 
         triangle = function(d) {
