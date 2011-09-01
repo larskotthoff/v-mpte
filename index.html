@@ -138,24 +138,26 @@ button.active {
                     return d;
                 });
         }
-        mkYaxis = function() {
-            this.append("svg:text").attr("class", "label")
+        ylabel = function() {
+            this.attr("class", "label")
                 .attr("x", xscale(max))
                 .attr("y", function(d) { return h - yscale(d) - yoffset - 3; })
                 .attr("text-anchor", "end")
                 .text(yscale.tickFormat(10));
-            this.append("svg:line").attr("x1", xscale(min))
+        }
+        yline = function() {
+            this.attr("x1", xscale(min))
                 .attr("x2", xscale(max))
                 .attr("y1", function(d) { return h - yscale(d) - yoffset; })
                 .attr("y2", function(d) { return h - yscale(d) - yoffset; });
         }
+        mkYaxis = function() {
+            this.append("svg:text").call(ylabel);
+            this.append("svg:line").call(yline);
+        }
         upYaxis = function() {
-            this.select("text")
-                .attr("y", function(d) { return h - yscale(d) - yoffset - 3; })
-                .text(yscale.tickFormat(10));
-            this.select("line")
-                .attr("y1", function(d) { return h - yscale(d) - yoffset; })
-                .attr("y2", function(d) { return h - yscale(d) - yoffset; });
+            this.select("text").call(ylabel);
+            this.select("line").call(yline);
         }
         mkGraph = function() {
             hist = histo.value(accessor(curmonth))(data);
