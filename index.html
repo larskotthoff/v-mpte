@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Precipitation at Maya sites</title>
+        <script type="text/javascript" src="https://raw.github.com/mbostock/d3/master/d3.min.js"></script>
+        <script type="text/javascript" src="https://raw.github.com/mbostock/d3/master/d3.geo.min.js"></script>
+        <script type="text/javascript" src="https://raw.github.com/mbostock/d3/master/d3.layout.min.js"></script>
+        <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.2.min.js"></script>
+        <style type="text/css"> 
+text {
+  font: 10px sans;
+  fill: #222;
+  shape-rendering: crispEdges;
+  text-rendering: optimizeLegibility;
+}
+
+rect {
+  stroke: #222;
+  shape-rendering: crispEdges;
+}
+
+path {
+  stroke: #222;
+  fill: none;
+}
+ 
+line {
+  stroke: #aaa;
+  shape-rendering: crispEdges;
+}
+        </style>
+    </head>
+
+    <body>
+        <script type="text/javascript">
+        proj = d3.geo.mercator().scale(1).translate([0,0]),
+        path = d3.geo.path().projection(proj).pointRadius(1);
+
+        var margin = 25,
+            width = window.innerWidth - margin,
+            height = window.innerHeight - margin;
+
+        svg = d3.select("body")
+            .append("svg:svg")
+            .attr("height", height)
+            .attr("width", width);
+        map = svg.append("svg:g");
+
+        d3.json("mesoamerica.geojson", function(json) {
+            var bounds0 = d3.geo.bounds(json),
+                bounds = bounds0.map(proj),
+                xscale = width/Math.abs(bounds[1][0] - bounds[0][0]),
+                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]),
+                scale = Math.min(xscale, yscale);
+
+            proj.scale(scale);
+            proj.translate(proj([-bounds0[0][0], -bounds0[1][1]]));
+
+            map.selectAll("path")
+                .data(json.features)
+                .enter().append("svg:path")
+                .attr("d", path);
+        });
+        d3.json("rain-ele.geojson", function(json) {
+            svg.selectAll("path")
+                .data(json.features)
+                .enter().append("svg:path")
+                .style("fill", "#222")
+                .attr("d", path);
+        });
+        </script>
+    </body>
+</html>
