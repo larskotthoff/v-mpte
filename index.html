@@ -116,7 +116,7 @@ line {
 
             // draw heatmap
             var hm = svg.append("svg:g")
-                .attr("transform", "translate(" +
+                    .attr("transform", "translate(" +
                         (window.innerWidth - margin - (numBins * 23)) +
                         ", " + margin + ")"),
                 hmrows = hm.selectAll("g")
