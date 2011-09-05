@@ -10,13 +10,11 @@
 text {
   font: 10px sans;
   fill: #222;
-  shape-rendering: crispEdges;
   text-rendering: optimizeLegibility;
 }
 
 rect {
   stroke: #222;
-  shape-rendering: crispEdges;
 }
 
 path {
@@ -33,18 +31,36 @@ line {
 
     <body>
         <script type="text/javascript">
-        proj = d3.geo.mercator().scale(1).translate([0,0]),
-        path = d3.geo.path().projection(proj).pointRadius(1);
-
-        var margin = 25,
+        function nsort(a, b) {
+            return a - b;
+        }
+        function adjLims(min, max) {
+            var tmp = Math.pow(10, ('' + max).length - 2),
+                tmpmin = min - (min % tmp),
+                tmpmax = max - (max % tmp) + tmp;
+            return [tmpmin, tmpmax];
+        }
+        function mkMatrix(l, init) {
+            m = new Array(l);
+            for(var i = 0; i < l; i++) {
+                m[i] = new Array(l);
+                for(var j = 0; j < l; j++) {
+                    m[i][j] = init;
+                }
+            }
+            return m;
+        }
+        var proj = d3.geo.mercator().scale(1).translate([0,0]),
+            path = d3.geo.path().projection(proj).pointRadius(1),
+            margin = 25,
             width = window.innerWidth - margin,
-            height = window.innerHeight - margin;
-
-        svg = d3.select("body")
-            .append("svg:svg")
-            .attr("height", height)
-            .attr("width", width);
-        map = svg.append("svg:g");
+            height = window.innerHeight - margin,
+            numBins = 10,
+            svg = d3.select("body")
+                .append("svg:svg")
+                .attr("height", height)
+                .attr("width", width),
+            map = svg.append("svg:g");
 
         d3.json("mesoamerica.geojson", function(json) {
             var bounds0 = d3.geo.bounds(json),
@@ -62,11 +78,63 @@ line {
                 .attr("d", path);
         });
         d3.json("rain-ele.geojson", function(json) {
-            svg.selectAll("path")
+            map.selectAll("path")
                 .data(json.features)
                 .enter().append("svg:path")
                 .style("fill", "#222")
                 .attr("d", path);
+
+            // extract data, get limits
+            var rains = $.map(json.features, function(d, i) {
+                    return d.properties["rain-year"];
+                    }).sort(nsort),
+                elevations = $.map(json.features, function(d, i) {
+                    var e = d.properties["elevation"];
+                    return e < 0 ? 0 : e;
+                }).sort(nsort),
+                tmp = adjLims(rains[0], rains[rains.length-1]),
+                rmin = tmp[0], rmax = tmp[1],
+                rdelta = (rmax - rmin) / numBins,
+                tmp = adjLims(elevations[0], elevations[elevations.length-1]),
+                emin = tmp[0], emax = tmp[1],
+                edelta = (emax - emin) / numBins,
+                bins = mkMatrix(numBins, 0);
+
+            // populate bins
+            $.each(json.features, function(i, d) {
+                var rbin = Math.floor((d.properties["rain-year"] - rmin) /
+                            rdelta),
+                    e = d.properties["elevation"], e = e < 0 ? 0 : e,
+                    ebin = Math.floor((e - emin) /
+                            edelta);
+                bins[rbin][ebin]++;
+            });
+            var nmax = d3.max($.map(bins, function(d,i) { return d3.max(d); })),
+                colour = d3.scale.pow().exponent(.3)
+                        .domain([0, nmax])
+                        .range(["rgb(255,255,255)", "rgb(0,0,0)"]);
+
+            // draw heatmap
+            var hm = svg.append("svg:g")
+                .attr("transform", "translate(" +
+                        (window.innerWidth - margin - (numBins * 23)) +
+                        ", " + margin + ")"),
+                hmrows = hm.selectAll("g")
+                    .data(bins)
+                    .enter().append("svg:g")
+                    .attr("transform", function(d, i) {
+                            return "translate(0," + (20 * i) + ")";
+                        });
+            hmrows.selectAll("rect")
+                .data(function(d) { return d; })
+                .enter().append("svg:rect")
+                .attr("transform", function(d, i) {
+                        return "translate(" + (20 * i) + ",0)";
+                    })
+                .attr("width", 20)
+                .attr("height", 20)
+                .attr("fill", function(d) { return colour(d); })
+                .append("svg:title").text( function(d) { return d; });
         });
         </script>
     </body>
