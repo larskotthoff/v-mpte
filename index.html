@@ -7,6 +7,11 @@
         <script type="text/javascript" src="https://raw.github.com/mbostock/d3/master/d3.layout.min.js"></script>
         <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.2.min.js"></script>
         <style type="text/css"> 
+body {
+  font: 10px sans;
+  fill: #222;
+  text-rendering: optimizeLegibility;
+}
 text {
   font: 10px sans;
   fill: #222;
@@ -15,6 +20,10 @@ text {
 
 rect {
   stroke: #222;
+  stroke-width: 0.5;
+}
+rect:hover {
+  fill: #f00;
 }
 
 path {
@@ -52,7 +61,7 @@ line {
         }
         var proj = d3.geo.mercator().scale(1).translate([0,0]),
             path = d3.geo.path().projection(proj).pointRadius(1),
-            margin = 25,
+            margin = 25, s = 20,
             width = window.innerWidth - margin,
             height = window.innerHeight - margin,
             numBins = 10,
@@ -110,6 +119,7 @@ line {
                 bins[rbin][ebin]++;
             });
             var nmax = d3.max($.map(bins, function(d,i) { return d3.max(d); })),
+                sRow = 0,
                 colour = d3.scale.pow().exponent(.3)
                         .domain([0, nmax])
                         .range(["rgb(255,255,255)", "rgb(0,0,0)"]);
@@ -117,24 +127,40 @@ line {
             // draw heatmap
             var hm = svg.append("svg:g")
                     .attr("transform", "translate(" +
-                        (window.innerWidth - margin - (numBins * 23)) +
+                        (window.innerWidth - (2 * margin) - (numBins * s)) +
                         ", " + margin + ")"),
                 hmrows = hm.selectAll("g")
                     .data(bins)
                     .enter().append("svg:g")
                     .attr("transform", function(d, i) {
-                            return "translate(0," + (20 * i) + ")";
-                        });
+                            return "translate(0," + (s * i) + ")";
+                        })
+                    .on("mouseover", function(d, i) { sRow = i });
             hmrows.selectAll("rect")
                 .data(function(d) { return d; })
                 .enter().append("svg:rect")
                 .attr("transform", function(d, i) {
-                        return "translate(" + (20 * i) + ",0)";
+                        return "translate(" + (s * i) + ",0)";
                     })
-                .attr("width", 20)
-                .attr("height", 20)
+                .attr("width", s)
+                .attr("height", s)
                 .attr("fill", function(d) { return colour(d); })
+                .on("mouseover", function(d, i) {
+                        hm.select("div").html(d + " sites <br/>" +
+                            "precipitation: " + (rmin + sRow * rdelta) + " - " +
+                            (rmin+(sRow+1)*rdelta) + " l/m<sup>2</sup><br/>" +
+                            "elevation: " + (emin + i * edelta) + " - " +
+                            (emin + (i+1) * edelta) + " m");
+                    })
                 .append("svg:title").text( function(d) { return d; });
+
+            // text for selected stuff
+            hm.append("svg:foreignObject")
+                    .attr("width", numBins * s)
+                    .attr("height", 40)
+                    .attr("transform", "translate(0," +
+                        (numBins * s + margin) + ")")
+                    .append("div");
         });
         </script>
     </body>
