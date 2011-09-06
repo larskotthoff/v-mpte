@@ -49,12 +49,12 @@ line {
                 tmpmax = max - (max % tmp) + tmp;
             return [tmpmin, tmpmax];
         }
-        function mkMatrix(l, init) {
+        function mkMatrix(l) {
             m = new Array(l);
             for(var i = 0; i < l; i++) {
                 m[i] = new Array(l);
                 for(var j = 0; j < l; j++) {
-                    m[i][j] = init;
+                    m[i][j] = new Array();
                 }
             }
             return m;
@@ -88,21 +88,15 @@ line {
                 .enter().append("svg:path")
                 .attr("d", path);
         });
-        function siteSel(sTrue, sFalse) {
-            return function(d) {
-                var r = d.properties["rain-year"],
-                    e = d.properties["elevation"];
-                if(r >= rsmin && r < rsmax && e >= esmin && e < esmax) {
-                    return sTrue;
-                } else {
-                    return sFalse;
-                }
-            }
+        function mkSiteSel() {
+            this.style("fill", "#f00")
+                .style("stroke", "#f00")
+                .style("stroke-width", 3);
         }
         function mkSite() {
-            this.style("fill", siteSel("#f00", "#222"))
-                .style("stroke", siteSel("#f00", "#222"))
-                .style("stroke-width", siteSel(3, 1));
+            this.style("fill", "#222")
+                .style("stroke", "#222")
+                .style("stroke-width", 1);
         }
         d3.json("rain-ele.geojson", function(json) {
             sites.selectAll("path")
@@ -113,7 +107,7 @@ line {
 
             // extract data, get limits
             var rains = $.map(json.features, function(d, i) {
-                    return d.properties["rain-year"];
+                        return d.properties["rain-year"];
                     }).sort(nsort),
                 elevations = $.map(json.features, function(d, i) {
                     var e = d.properties["elevation"];
@@ -125,7 +119,8 @@ line {
                 tmp = adjLims(elevations[0], elevations[elevations.length-1]),
                 emin = tmp[0], emax = tmp[1],
                 edelta = (emax - emin) / numBins,
-                bins = mkMatrix(numBins, 0);
+                bins = mkMatrix(numBins),
+                selectedSites = null;
 
             // populate bins
             $.each(json.features, function(i, d) {
@@ -134,9 +129,13 @@ line {
                     e = d.properties["elevation"], e = e < 0 ? 0 : e,
                     ebin = Math.floor((e - emin) /
                             edelta);
-                bins[rbin][ebin]++;
+                bins[rbin][ebin].push(d);
             });
-            var nmax = d3.max($.map(bins, function(d,i) { return d3.max(d); })),
+            var nmax = d3.max($.map(bins, function(d, i) {
+                        return d3.max($.map(d, function(e, j) {
+                                return e.length;
+                            }));
+                    })),
                 colour = d3.scale.pow().exponent(.3)
                         .domain([0, nmax])
                         .range(["rgb(255,255,255)", "rgb(0,0,0)"]);
@@ -161,21 +160,25 @@ line {
                     })
                 .attr("width", s)
                 .attr("height", s)
-                .attr("fill", function(d) { return colour(d); })
+                .attr("fill", function(d) { return colour(d.length); })
                 .on("mouseover", function(d, col) {
+                        if(selectedSites != null) {
+                            sites.selectAll("path").data(selectedSites)
+                                .call(mkSite);
+                        }
                         var row = parseInt(d3.select(d3.event.target.parentNode)
-                                    .attr("row"));
-                        rsmin = rmin + row * rdelta,
-                        rsmax = rmin + (row + 1) * rdelta,
-                        esmin = emin + col * edelta,
-                        esmax = emin + (col + 1) * edelta;
-                        hm.select("div").html(d + " sites <br/>" +
-                            "precipitation: " + rsmin + " - " + rsmax +
-                            " l/m<sup>2</sup><br/>" + "elevation: " + esmin +
+                                .attr("row"));
+                            rsmin = rmin + row * rdelta,
+                            rsmax = rmin + (row + 1) * rdelta,
+                            esmin = emin + col * edelta,
+                            esmax = emin + (col + 1) * edelta;
+                        hm.select("div").html(d.length + " sites <br/>" +
+                            "precipitation " + rsmin + " - " + rsmax +
+                            " l/m<sup>2</sup><br/>" + "elevation " + esmin +
                             " - " + esmax + " m");
-                        sites.selectAll("path")
-                            .data(json.features)
-                            .call(mkSite);
+                        selectedSites = d;
+                        sites.selectAll("path").data(selectedSites)
+                            .call(mkSiteSel);
                     });
 
             // text for selected stuff
