@@ -65,11 +65,13 @@ line {
             width = window.innerWidth - margin,
             height = window.innerHeight - margin,
             numBins = 10,
+            rsmin = -1, rsmax = -1, esmin = -1, esmax = -1,
             svg = d3.select("body")
                 .append("svg:svg")
                 .attr("height", height)
                 .attr("width", width),
-            map = svg.append("svg:g");
+            map = svg.append("svg:g"),
+            sites = map.append("svg:g");
 
         d3.json("mesoamerica.geojson", function(json) {
             var bounds0 = d3.geo.bounds(json),
@@ -81,17 +83,33 @@ line {
             proj.scale(scale);
             proj.translate(proj([-bounds0[0][0], -bounds0[1][1]]));
 
-            map.selectAll("path")
+            map.append("svg:g").selectAll("path")
                 .data(json.features)
                 .enter().append("svg:path")
                 .attr("d", path);
         });
+        function siteSel(sTrue, sFalse) {
+            return function(d) {
+                var r = d.properties["rain-year"],
+                    e = d.properties["elevation"];
+                if(r >= rsmin && r < rsmax && e >= esmin && e < esmax) {
+                    return sTrue;
+                } else {
+                    return sFalse;
+                }
+            }
+        }
+        function mkSite() {
+            this.style("fill", siteSel("#f00", "#222"))
+                .style("stroke", siteSel("#f00", "#222"))
+                .style("stroke-width", siteSel(3, 1));
+        }
         d3.json("rain-ele.geojson", function(json) {
-            map.selectAll("path")
+            sites.selectAll("path")
                 .data(json.features)
                 .enter().append("svg:path")
-                .style("fill", "#222")
-                .attr("d", path);
+                .attr("d", path)
+                .call(mkSite);
 
             // extract data, get limits
             var rains = $.map(json.features, function(d, i) {
@@ -119,7 +137,6 @@ line {
                 bins[rbin][ebin]++;
             });
             var nmax = d3.max($.map(bins, function(d,i) { return d3.max(d); })),
-                sRow = 0,
                 colour = d3.scale.pow().exponent(.3)
                         .domain([0, nmax])
                         .range(["rgb(255,255,255)", "rgb(0,0,0)"]);
@@ -132,10 +149,10 @@ line {
                 hmrows = hm.selectAll("g")
                     .data(bins)
                     .enter().append("svg:g")
+                    .attr("row", function(d, i) { return i; })
                     .attr("transform", function(d, i) {
                             return "translate(0," + (s * i) + ")";
-                        })
-                    .on("mouseover", function(d, i) { sRow = i });
+                        });
             hmrows.selectAll("rect")
                 .data(function(d) { return d; })
                 .enter().append("svg:rect")
@@ -145,14 +162,21 @@ line {
                 .attr("width", s)
                 .attr("height", s)
                 .attr("fill", function(d) { return colour(d); })
-                .on("mouseover", function(d, i) {
+                .on("mouseover", function(d, col) {
+                        var row = parseInt(d3.select(d3.event.target.parentNode)
+                                    .attr("row"));
+                        rsmin = rmin + row * rdelta,
+                        rsmax = rmin + (row + 1) * rdelta,
+                        esmin = emin + col * edelta,
+                        esmax = emin + (col + 1) * edelta;
                         hm.select("div").html(d + " sites <br/>" +
-                            "precipitation: " + (rmin + sRow * rdelta) + " - " +
-                            (rmin+(sRow+1)*rdelta) + " l/m<sup>2</sup><br/>" +
-                            "elevation: " + (emin + i * edelta) + " - " +
-                            (emin + (i+1) * edelta) + " m");
-                    })
-                .append("svg:title").text( function(d) { return d; });
+                            "precipitation: " + rsmin + " - " + rsmax +
+                            " l/m<sup>2</sup><br/>" + "elevation: " + esmin +
+                            " - " + esmax + " m");
+                        sites.selectAll("path")
+                            .data(json.features)
+                            .call(mkSite);
+                    });
 
             // text for selected stuff
             hm.append("svg:foreignObject")
