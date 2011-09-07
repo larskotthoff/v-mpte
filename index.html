@@ -30,6 +30,16 @@ path {
   stroke: #222;
   fill: none;
 }
+path.site {
+  stroke: #222;
+  stroke-width: 1;
+  fill: #222;
+}
+path.site-selected {
+  stroke: #f00;
+  stroke-width: 3;
+  fill: #f00;
+}
  
 line {
   stroke: #aaa;
@@ -89,14 +99,10 @@ line {
                 .attr("d", path);
         });
         function mkSiteSel() {
-            this.style("fill", "#f00")
-                .style("stroke", "#f00")
-                .style("stroke-width", 3);
+            this.attr("class", "site-selected");
         }
         function mkSite() {
-            this.style("fill", "#222")
-                .style("stroke", "#222")
-                .style("stroke-width", 1);
+            this.attr("class", "site");
         }
         d3.json("rain-ele.geojson", function(json) {
             sites.selectAll("path")
