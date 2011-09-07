@@ -109,7 +109,10 @@ line {
                 .data(json.features)
                 .enter().append("svg:path")
                 .attr("d", path)
-                .call(mkSite);
+                .call(mkSite)
+                .append("svg:title").text(function(d) {
+                    return d.properties.name;
+                });
 
             // extract data, get limits
             var rains = $.map(json.features, function(d, i) {
@@ -125,16 +128,14 @@ line {
                 tmp = adjLims(elevations[0], elevations[elevations.length-1]),
                 emin = tmp[0], emax = tmp[1],
                 edelta = (emax - emin) / numBins,
-                bins = mkMatrix(numBins),
-                selectedSites = null;
+                bins = mkMatrix(numBins);
 
             // populate bins
             $.each(json.features, function(i, d) {
                 var rbin = Math.floor((d.properties["rain-year"] - rmin) /
                             rdelta),
                     e = d.properties["elevation"], e = e < 0 ? 0 : e,
-                    ebin = Math.floor((e - emin) /
-                            edelta);
+                    ebin = Math.floor((e - emin) / edelta);
                 bins[rbin][ebin].push(d);
             });
             var nmax = d3.max($.map(bins, function(d, i) {
@@ -168,10 +169,6 @@ line {
                 .attr("height", s)
                 .attr("fill", function(d) { return colour(d.length); })
                 .on("mouseover", function(d, col) {
-                        if(selectedSites != null) {
-                            sites.selectAll("path").data(selectedSites)
-                                .call(mkSite);
-                        }
                         var row = parseInt(d3.select(d3.event.target.parentNode)
                                 .attr("row"));
                             rsmin = rmin + row * rdelta,
@@ -182,8 +179,10 @@ line {
                             "precipitation " + rsmin + " - " + rsmax +
                             " l/m<sup>2</sup><br/>" + "elevation " + esmin +
                             " - " + esmax + " m");
-                        selectedSites = d;
-                        sites.selectAll("path").data(selectedSites)
+                        sites.selectAll("path.site-selected").call(mkSite);
+                        sites.selectAll("path").data(d, function(d) {
+                                return d.properties.ObjectID;
+                            })
                             .call(mkSiteSel);
                     });
 
