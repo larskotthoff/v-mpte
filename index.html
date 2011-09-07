@@ -35,16 +35,13 @@ circle.site {
   stroke: #222;
   stroke-width: 1;
   fill: #222;
+  shape-rendering: optimizeSpeed;
 }
 circle.site-selected {
   stroke: #f00;
   stroke-width: 3;
   fill: #f00;
-}
- 
-line {
-  stroke: #aaa;
-  shape-rendering: crispEdges;
+  shape-rendering: optimizeSpeed;
 }
         </style>
     </head>
@@ -100,6 +97,7 @@ line {
                 .attr("d", path);
         });
         d3.json("rain-ele.geojson", function(json) {
+            // draw sites
             sites.selectAll("circle")
                 .data(json.features)
                 .enter().append("svg:circle")
@@ -182,7 +180,7 @@ line {
                             " - " + esmax + " m");
                         sites.selectAll("circle.site-selected")
                             .classed("site-selected", false);
-                        sites.selectAll("circle").data(d, function(e) {
+                        sites.selectAll("circle.site").data(d, function(e) {
                                 return e.properties.ObjectID;
                             })
                             .classed("site-selected", true);
