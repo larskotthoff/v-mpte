@@ -30,12 +30,13 @@ path {
   stroke: #222;
   fill: none;
 }
-path.site {
+
+circle.site {
   stroke: #222;
   stroke-width: 1;
   fill: #222;
 }
-path.site-selected {
+circle.site-selected {
   stroke: #f00;
   stroke-width: 3;
   fill: #f00;
@@ -98,18 +99,18 @@ line {
                 .enter().append("svg:path")
                 .attr("d", path);
         });
-        function mkSiteSel() {
-            this.attr("class", "site-selected");
-        }
-        function mkSite() {
-            this.attr("class", "site");
-        }
         d3.json("rain-ele.geojson", function(json) {
-            sites.selectAll("path")
+            sites.selectAll("circle")
                 .data(json.features)
-                .enter().append("svg:path")
-                .attr("d", path)
-                .call(mkSite)
+                .enter().append("svg:circle")
+                .attr("r", 1)
+                .attr("cx", function(d) {
+                        return proj(d.geometry.coordinates)[0];
+                    })
+                .attr("cy", function(d) {
+                        return proj(d.geometry.coordinates)[1];
+                    })
+                .classed("site", true)
                 .append("svg:title").text(function(d) {
                     return d.properties.name;
                 });
@@ -155,7 +156,7 @@ line {
                 hmrows = hm.selectAll("g")
                     .data(bins)
                     .enter().append("svg:g")
-                    .attr("row", function(d, i) { return i; })
+                    .property("row", function(d, i) { return i; })
                     .attr("transform", function(d, i) {
                             return "translate(0," + (s * i) + ")";
                         });
@@ -170,7 +171,7 @@ line {
                 .attr("fill", function(d) { return colour(d.length); })
                 .on("mouseover", function(d, col) {
                         var row = parseInt(d3.select(d3.event.target.parentNode)
-                                .attr("row"));
+                                .property("row"));
                             rsmin = rmin + row * rdelta,
                             rsmax = rmin + (row + 1) * rdelta,
                             esmin = emin + col * edelta,
@@ -179,11 +180,12 @@ line {
                             "precipitation " + rsmin + " - " + rsmax +
                             " l/m<sup>2</sup><br/>" + "elevation " + esmin +
                             " - " + esmax + " m");
-                        sites.selectAll("path.site-selected").call(mkSite);
-                        sites.selectAll("path").data(d, function(d) {
-                                return d.properties.ObjectID;
+                        sites.selectAll("circle.site-selected")
+                            .classed("site-selected", false);
+                        sites.selectAll("circle").data(d, function(e) {
+                                return e.properties.ObjectID;
                             })
-                            .call(mkSiteSel);
+                            .classed("site-selected", true);
                     });
 
             // text for selected stuff
