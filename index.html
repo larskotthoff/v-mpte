@@ -23,8 +23,7 @@ rect {
   stroke-width: 0.5;
 }
 rect.selected {
-  stroke: #f00;
-  stroke-width: 2;
+  filter: url(#highlight);
 }
 rect:hover {
   fill: #f00;
@@ -71,6 +70,15 @@ circle.site-selected {
             }
             return m;
         }
+        function addFilter(svg) {
+            var defs = svg.append("svg:defs");
+            defs.insert("svg:g").attr("id", "marker").append("svg:circle")
+                .attr("r", 10).attr("stroke", 2);
+            defs.append("svg:filter").attr("id", "highlight")
+                .append("svg:feBlend")
+                .attr("in", "SourceGraphic")
+                .attr("in2", "#marker");
+        }
         var proj = d3.geo.mercator().scale(1).translate([0,0]),
             path = d3.geo.path().projection(proj).pointRadius(1),
             margin = 25, s = 20,
@@ -83,6 +91,8 @@ circle.site-selected {
                 .attr("width", width),
             map = svg.append("svg:g"),
             sites = map.append("svg:g");
+        
+        addFilter(svg);
 
         d3.json("mesoamerica.geojson", function(json) {
             var bounds0 = d3.geo.bounds(json),
