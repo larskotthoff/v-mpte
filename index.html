@@ -22,6 +22,10 @@ rect {
   stroke: #222;
   stroke-width: 0.5;
 }
+rect.selected {
+  stroke: #f00;
+  stroke-width: 2;
+}
 rect:hover {
   fill: #f00;
 }
@@ -72,8 +76,7 @@ circle.site-selected {
             margin = 25, s = 20,
             width = window.innerWidth - margin,
             height = window.innerHeight - margin,
-            numBins = 10,
-            rsmin = -1, rsmax = -1, esmin = -1, esmax = -1,
+            numBins = 10, sSites = new Array(),
             svg = d3.select("body")
                 .append("svg:svg")
                 .attr("height", height)
@@ -167,24 +170,46 @@ circle.site-selected {
                 .attr("width", s)
                 .attr("height", s)
                 .attr("fill", function(d) { return colour(d.length); })
-                .on("mouseover", function(d, col) {
+                .on("click", function(d, col) {
+                    if(d.length > 0) {
                         var row = parseInt(d3.select(d3.event.target.parentNode)
-                                .property("row"));
-                            rsmin = rmin + row * rdelta,
-                            rsmax = rmin + (row + 1) * rdelta,
-                            esmin = emin + col * edelta,
-                            esmax = emin + (col + 1) * edelta;
-                        hm.select("div").html(d.length + " sites <br/>" +
-                            "precipitation " + rsmin + " - " + rsmax +
-                            " l/m<sup>2</sup><br/>" + "elevation " + esmin +
-                            " - " + esmax + " m");
+                                .property("row")),
+                            idx = sSites.indexOf(d[0]);
+                        if(idx > -1) {
+                            d3.select(this).classed("selected", false);
+                            sSites.splice(idx, d.length);
+                        } else {
+                            d3.select(this).classed("selected", true);
+                            sSites = sSites.concat(d);
+                        }
+                        hm.select("div").html(sSites.length > 0 ?
+                            sSites.length + " sites selected" :
+                            "");
                         sites.selectAll("circle.site-selected")
                             .classed("site-selected", false);
-                        sites.selectAll("circle.site").data(d, function(e) {
+                        sites.selectAll("circle.site").data(sSites,
+                            function(e) {
                                 return e.properties.ObjectID;
                             })
                             .classed("site-selected", true);
-                    });
+                    }
+                })
+                .on("mouseover", function(d, col) {
+                    var row = parseInt(d3.select(d3.event.target.parentNode)
+                            .property("row")),
+                        rsmin = rmin + row * rdelta,
+                        rsmax = rmin + (row + 1) * rdelta,
+                        esmin = emin + col * edelta,
+                        esmax = emin + (col + 1) * edelta;
+                    hm.select("div").html(d.length + " sites <br/>" +
+                        "precipitation " + rsmin + " - " + rsmax +
+                        " l/m<sup>2</sup><br/>" + "elevation " + esmin +
+                        " - " + esmax + " m");
+                })
+                .on("mouseout", function(d, col) {
+                    hm.select("div").html(sSites.length > 0 ?
+                        sSites.length + " sites selected" : "");
+                });
 
             // text for selected stuff
             hm.append("svg:foreignObject")
