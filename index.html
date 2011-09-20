@@ -22,11 +22,17 @@ rect {
   stroke: #222;
   stroke-width: 0.5;
 }
-rect.selected {
-  filter: url(#highlight);
+rect.overlay {
+  stroke: none;
+  fill-opacity: 0;
 }
-rect:hover {
-  fill: #f00;
+rect.overlay:hover {
+  stroke: #f00;
+  stroke-width: 2;
+}
+rect.selected {
+  stroke: #f00;
+  stroke-width: 2;
 }
 
 path {
@@ -70,15 +76,6 @@ circle.site-selected {
             }
             return m;
         }
-        function addFilter(svg) {
-            var defs = svg.append("svg:defs");
-            defs.insert("svg:g").attr("id", "marker").append("svg:circle")
-                .attr("r", 10).attr("stroke", 2);
-            defs.append("svg:filter").attr("id", "highlight")
-                .append("svg:feBlend")
-                .attr("in", "SourceGraphic")
-                .attr("in2", "#marker");
-        }
         var proj = d3.geo.mercator().scale(1).translate([0,0]),
             path = d3.geo.path().projection(proj).pointRadius(1),
             margin = 25, s = 20,
@@ -92,8 +89,6 @@ circle.site-selected {
             map = svg.append("svg:g"),
             sites = map.append("svg:g");
         
-        addFilter(svg);
-
         d3.json("mesoamerica.geojson", function(json) {
             var bounds0 = d3.geo.bounds(json),
                 bounds = bounds0.map(proj),
@@ -167,7 +162,6 @@ circle.site-selected {
                 hmrows = hm.selectAll("g")
                     .data(bins)
                     .enter().append("svg:g")
-                    .property("row", function(d, i) { return i; })
                     .attr("transform", function(d, i) {
                             return "translate(0," + (s * i) + ")";
                         });
@@ -179,7 +173,25 @@ circle.site-selected {
                     })
                 .attr("width", s)
                 .attr("height", s)
-                .attr("fill", function(d) { return colour(d.length); })
+                .attr("fill", function(d) { return colour(d.length); });
+
+            var hmrowso = hm.selectAll("g.overlay")
+                    .data(bins)
+                    .enter().append("svg:g")
+                    .attr("class", "overlay")
+                    .property("row", function(d, i) { return i; })
+                    .attr("transform", function(d, i) {
+                            return "translate(0," + (s * i) + ")";
+                        });
+            hmrowso.selectAll("rect.overlay")
+                .data(function(d) { return d; })
+                .enter().append("svg:rect")
+                .attr("class", "overlay")
+                .attr("transform", function(d, i) {
+                        return "translate(" + (s * i) + ",0)";
+                    })
+                .attr("width", s)
+                .attr("height", s)
                 .on("click", function(d, col) {
                     if(d.length > 0) {
                         var row = parseInt(d3.select(d3.event.target.parentNode)
