@@ -17,6 +17,9 @@ text {
   fill: #222;
   text-rendering: optimizeLegibility;
 }
+text.axislabel {
+    font-weight: bold;
+}
 
 rect {
   stroke: #222;
@@ -78,7 +81,7 @@ circle.site-selected {
         }
         var proj = d3.geo.mercator().scale(1).translate([0,0]),
             path = d3.geo.path().projection(proj).pointRadius(1),
-            margin = 25, s = 20,
+            margin = 25, s = 30,
             width = window.innerWidth - margin,
             height = window.innerHeight - margin,
             numBins = 10, sSites = new Array(),
@@ -157,8 +160,8 @@ circle.site-selected {
             // draw heatmap
             var hm = svg.append("svg:g")
                     .attr("transform", "translate(" +
-                        (window.innerWidth - (2 * margin) - (numBins * s)) +
-                        ", " + margin + ")"),
+                        (window.innerWidth - (3 * margin) - (numBins * s)) +
+                        ", " + (2 * margin) + ")"),
                 hmrows = hm.selectAll("g")
                     .data(bins)
                     .enter().append("svg:g")
@@ -174,7 +177,6 @@ circle.site-selected {
                 .attr("width", s)
                 .attr("height", s)
                 .attr("fill", function(d) { return colour(d.length); });
-
             var hmrowso = hm.selectAll("g.overlay")
                     .data(bins)
                     .enter().append("svg:g")
@@ -232,6 +234,34 @@ circle.site-selected {
                     hm.select("div").html(sSites.length > 0 ?
                         sSites.length + " sites selected" : "");
                 });
+            // labels
+            for(var i = 0; i <= numBins; i++) {
+                hm.append("svg:text")
+                    .attr("transform", "translate(-5," + (s * i) + ")")
+                    .attr("text-anchor", "end")
+                    .attr("baseline-shift", "-50%")
+                    .text(rmin + rdelta * i);
+                hm.append("svg:text")
+                    .attr("transform", "translate(" + (s * i) + ",-5)")
+                    .attr("text-anchor", "middle")
+                    .text(emin + edelta * i);
+            }
+            hm.append("svg:text")
+                .attr("transform", "translate(-50," + (s * numBins / 2) + ")")
+                .attr("text-anchor", "end")
+                .classed("axislabel", true)
+                .text("rain [l/m")
+                .append("svg:tspan")
+                .attr("baseline-shift", "super")
+                .text("2")
+                .append("svg:tspan")
+                .text("]");
+            hm.append("svg:text")
+                .attr("transform", "translate(" + (s * numBins / 2) + ",-25)")
+                .attr("text-anchor", "middle")
+                .classed("axislabel", true)
+                .text("elevation [m]");
+
 
             // text for selected stuff
             hm.append("svg:foreignObject")
