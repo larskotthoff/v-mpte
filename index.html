@@ -6,7 +6,37 @@
         <script type="text/javascript" src="https://raw.github.com/mbostock/d3/master/d3.geo.min.js"></script>
         <script type="text/javascript" src="https://raw.github.com/mbostock/d3/master/d3.layout.min.js"></script>
         <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.2.min.js"></script>
+        <script type="text/javascript" src="https://raw.github.com/bigmlcom/tipsy/master/src/javascripts/jquery.tipsy.js"></script>
         <style type="text/css"> 
+.tipsy {
+  padding: 5px;
+  position: absolute;
+  z-index: 100000;
+}
+
+.tipsy-inner {
+  padding: 5px 8px 4px 8px;
+  background-color: #000;
+  color: #eee;
+  max-width: 200px;
+  text-align: center;
+}
+
+.tipsy-inner {
+  border-radius: 3px;
+  -moz-border-radius:3px;
+  -webkit-border-radius:3px;
+}
+
+.tipsy-arrow {
+  position: absolute;
+  width: 9px;
+  height: 5px;
+}
+
+.tipsy-sw .tipsy-arrow { bottom: 0; left: 10px; }
+.tipsy-se .tipsy-arrow { bottom: 0; right: 10px; }
+
 body {
   font: 10px sans;
   fill: #222;
@@ -92,184 +122,190 @@ circle.site-selected {
             map = svg.append("svg:g"),
             sites = map.append("svg:g");
         
-        d3.json("mesoamerica.geojson", function(json) {
-            var bounds0 = d3.geo.bounds(json),
-                bounds = bounds0.map(proj),
-                xscale = width/Math.abs(bounds[1][0] - bounds[0][0]),
-                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]),
-                scale = Math.min(xscale, yscale);
+            d3.json("mesoamerica.geojson", function(json) {
+                var bounds0 = d3.geo.bounds(json),
+                    bounds = bounds0.map(proj),
+                    xscale = width/Math.abs(bounds[1][0] - bounds[0][0]),
+                    yscale = height/Math.abs(bounds[1][1] - bounds[0][1]),
+                    scale = Math.min(xscale, yscale);
 
-            proj.scale(scale);
-            proj.translate(proj([-bounds0[0][0], -bounds0[1][1]]));
+                proj.scale(scale);
+                proj.translate(proj([-bounds0[0][0], -bounds0[1][1]]));
 
-            map.append("svg:g").selectAll("path")
-                .data(json.features)
-                .enter().append("svg:path")
-                .attr("d", path);
-        });
-        d3.json("rain-ele.geojson", function(json) {
-            // draw sites
-            sites.selectAll("circle")
-                .data(json.features)
-                .enter().append("svg:circle")
-                .attr("r", 1)
-                .attr("cx", function(d) {
-                        return proj(d.geometry.coordinates)[0];
-                    })
-                .attr("cy", function(d) {
-                        return proj(d.geometry.coordinates)[1];
-                    })
-                .classed("site", true)
-                .append("svg:title").text(function(d) {
-                    return d.properties.name;
-                });
+                map.append("svg:g").selectAll("path")
+                    .data(json.features)
+                    .enter().append("svg:path")
+                    .attr("d", path);
+            d3.json("rain-ele.geojson", function(json) {
+                // draw sites
+                sites.selectAll("circle")
+                    .data(json.features)
+                    .enter().append("svg:circle")
+                    .attr("r", 1)
+                    .attr("cx", function(d) {
+                            return proj(d.geometry.coordinates)[0];
+                        })
+                    .attr("cy", function(d) {
+                            return proj(d.geometry.coordinates)[1];
+                        })
+                    .classed("site", true)
+                    .append("original-title").text(function(d) {
+                        if(proj(d.geometry.coordinates)[0] > width/2) {
+                            $(this).parent().tipsy({gravity:'se'});
+                        } else {
+                            $(this).parent().tipsy({gravity:'sw'});
+                        }
+                        return d.properties.name;
+                    });
 
-            // extract data, get limits
-            var rains = $.map(json.features, function(d, i) {
-                        return d.properties["rain-year"];
+                // extract data, get limits
+                var rains = $.map(json.features, function(d, i) {
+                            return d.properties["rain-year"];
+                        }).sort(nsort),
+                    elevations = $.map(json.features, function(d, i) {
+                        var e = d.properties["elevation"];
+                        return e < 0 ? 0 : e;
                     }).sort(nsort),
-                elevations = $.map(json.features, function(d, i) {
-                    var e = d.properties["elevation"];
-                    return e < 0 ? 0 : e;
-                }).sort(nsort),
-                tmp = adjLims(rains[0], rains[rains.length-1]),
-                rmin = tmp[0], rmax = tmp[1],
-                rdelta = (rmax - rmin) / numBins,
-                tmp = adjLims(elevations[0], elevations[elevations.length-1]),
-                emin = tmp[0], emax = tmp[1],
-                edelta = (emax - emin) / numBins,
-                bins = mkMatrix(numBins);
+                    tmp = adjLims(rains[0], rains[rains.length-1]),
+                    rmin = tmp[0], rmax = tmp[1],
+                    rdelta = (rmax - rmin) / numBins,
+                    tmp = adjLims(elevations[0],
+                            elevations[elevations.length-1]),
+                    emin = tmp[0], emax = tmp[1],
+                    edelta = (emax - emin) / numBins,
+                    bins = mkMatrix(numBins);
 
-            // populate bins
-            $.each(json.features, function(i, d) {
-                var rbin = Math.floor((d.properties["rain-year"] - rmin) /
-                            rdelta),
-                    e = d.properties["elevation"], e = e < 0 ? 0 : e,
-                    ebin = Math.floor((e - emin) / edelta);
-                bins[rbin][ebin].push(d);
-            });
-            var nmax = d3.max($.map(bins, function(d, i) {
-                        return d3.max($.map(d, function(e, j) {
-                                return e.length;
-                            }));
-                    })),
-                colour = d3.scale.pow().exponent(.3)
-                        .domain([0, nmax])
-                        .range(["rgb(255,255,255)", "rgb(0,0,0)"]);
+                // populate bins
+                $.each(json.features, function(i, d) {
+                    var rbin = Math.floor((d.properties["rain-year"] - rmin) /
+                                rdelta),
+                        e = d.properties["elevation"], e = e < 0 ? 0 : e,
+                        ebin = Math.floor((e - emin) / edelta);
+                    bins[rbin][ebin].push(d);
+                });
+                var nmax = d3.max($.map(bins, function(d, i) {
+                            return d3.max($.map(d, function(e, j) {
+                                    return e.length;
+                                }));
+                        })),
+                    colour = d3.scale.pow().exponent(.3)
+                            .domain([0, nmax])
+                            .range(["rgb(255,255,255)", "rgb(0,0,0)"]);
 
-            // draw heatmap
-            var hm = svg.append("svg:g")
-                    .attr("transform", "translate(" +
-                        (window.innerWidth - (3 * margin) - (numBins * s)) +
-                        ", " + (2 * margin) + ")"),
-                hmrows = hm.selectAll("g")
-                    .data(bins)
-                    .enter().append("svg:g")
+                // draw heatmap
+                var hm = svg.append("svg:g")
+                        .attr("transform", "translate(" +
+                            (window.innerWidth - (3 * margin) - (numBins * s)) +
+                            ", " + (2 * margin) + ")"),
+                    hmrows = hm.selectAll("g")
+                        .data(bins)
+                        .enter().append("svg:g")
+                        .attr("transform", function(d, i) {
+                                return "translate(0," + (s * i) + ")";
+                            });
+                hmrows.selectAll("rect")
+                    .data(function(d) { return d; })
+                    .enter().append("svg:rect")
                     .attr("transform", function(d, i) {
-                            return "translate(0," + (s * i) + ")";
-                        });
-            hmrows.selectAll("rect")
-                .data(function(d) { return d; })
-                .enter().append("svg:rect")
-                .attr("transform", function(d, i) {
-                        return "translate(" + (s * i) + ",0)";
-                    })
-                .attr("width", s)
-                .attr("height", s)
-                .attr("fill", function(d) { return colour(d.length); });
-            var hmrowso = hm.selectAll("g.overlay")
-                    .data(bins)
-                    .enter().append("svg:g")
+                            return "translate(" + (s * i) + ",0)";
+                        })
+                    .attr("width", s)
+                    .attr("height", s)
+                    .attr("fill", function(d) { return colour(d.length); });
+                var hmrowso = hm.selectAll("g.overlay")
+                        .data(bins)
+                        .enter().append("svg:g")
+                        .attr("class", "overlay")
+                        .property("row", function(d, i) { return i; })
+                        .attr("transform", function(d, i) {
+                                return "translate(0," + (s * i) + ")";
+                            });
+                hmrowso.selectAll("rect.overlay")
+                    .data(function(d) { return d; })
+                    .enter().append("svg:rect")
                     .attr("class", "overlay")
-                    .property("row", function(d, i) { return i; })
                     .attr("transform", function(d, i) {
-                            return "translate(0," + (s * i) + ")";
-                        });
-            hmrowso.selectAll("rect.overlay")
-                .data(function(d) { return d; })
-                .enter().append("svg:rect")
-                .attr("class", "overlay")
-                .attr("transform", function(d, i) {
-                        return "translate(" + (s * i) + ",0)";
+                            return "translate(" + (s * i) + ",0)";
+                        })
+                    .attr("width", s)
+                    .attr("height", s)
+                    .on("click", function(d, col) {
+                        if(d.length > 0) {
+                            var row = parseInt(d3.select(d3.event.target
+                                    .parentNode).property("row")),
+                                idx = sSites.indexOf(d[0]);
+                            if(idx > -1) {
+                                d3.select(this).classed("selected", false);
+                                sSites.splice(idx, d.length);
+                            } else {
+                                d3.select(this).classed("selected", true);
+                                sSites = sSites.concat(d);
+                            }
+                            hm.select("div").html(sSites.length > 0 ?
+                                sSites.length + " sites selected" :
+                                "");
+                            sites.selectAll("circle.site-selected")
+                                .classed("site-selected", false);
+                            sites.selectAll("circle.site").data(sSites,
+                                function(e) {
+                                    return e.properties.ObjectID;
+                                })
+                                .classed("site-selected", true);
+                        }
                     })
-                .attr("width", s)
-                .attr("height", s)
-                .on("click", function(d, col) {
-                    if(d.length > 0) {
+                    .on("mouseover", function(d, col) {
                         var row = parseInt(d3.select(d3.event.target.parentNode)
                                 .property("row")),
-                            idx = sSites.indexOf(d[0]);
-                        if(idx > -1) {
-                            d3.select(this).classed("selected", false);
-                            sSites.splice(idx, d.length);
-                        } else {
-                            d3.select(this).classed("selected", true);
-                            sSites = sSites.concat(d);
-                        }
+                            rsmin = rmin + row * rdelta,
+                            rsmax = rmin + (row + 1) * rdelta,
+                            esmin = emin + col * edelta,
+                            esmax = emin + (col + 1) * edelta;
+                        hm.select("div").html(d.length + " sites <br/>" +
+                            "precipitation " + rsmin + " - " + rsmax +
+                            " l/m<sup>2</sup><br/>" + "elevation " + esmin +
+                            " - " + esmax + " m");
+                    })
+                    .on("mouseout", function(d, col) {
                         hm.select("div").html(sSites.length > 0 ?
-                            sSites.length + " sites selected" :
-                            "");
-                        sites.selectAll("circle.site-selected")
-                            .classed("site-selected", false);
-                        sites.selectAll("circle.site").data(sSites,
-                            function(e) {
-                                return e.properties.ObjectID;
-                            })
-                            .classed("site-selected", true);
-                    }
-                })
-                .on("mouseover", function(d, col) {
-                    var row = parseInt(d3.select(d3.event.target.parentNode)
-                            .property("row")),
-                        rsmin = rmin + row * rdelta,
-                        rsmax = rmin + (row + 1) * rdelta,
-                        esmin = emin + col * edelta,
-                        esmax = emin + (col + 1) * edelta;
-                    hm.select("div").html(d.length + " sites <br/>" +
-                        "precipitation " + rsmin + " - " + rsmax +
-                        " l/m<sup>2</sup><br/>" + "elevation " + esmin +
-                        " - " + esmax + " m");
-                })
-                .on("mouseout", function(d, col) {
-                    hm.select("div").html(sSites.length > 0 ?
-                        sSites.length + " sites selected" : "");
-                });
-            // labels
-            for(var i = 0; i <= numBins; i++) {
+                            sSites.length + " sites selected" : "");
+                    });
+                // labels
+                for(var i = 0; i <= numBins; i++) {
+                    hm.append("svg:text")
+                        .attr("transform", "translate(-5," + (s * i) + ")")
+                        .attr("text-anchor", "end")
+                        .attr("baseline-shift", "-50%")
+                        .text(rmin + rdelta * i);
+                    hm.append("svg:text")
+                        .attr("transform", "translate(" + (s * i) + ",-5)")
+                        .attr("text-anchor", "middle")
+                        .text(emin + edelta * i);
+                }
                 hm.append("svg:text")
-                    .attr("transform", "translate(-5," + (s * i) + ")")
+                    .attr("transform", "translate(-50," + (s*numBins/2) + ")")
                     .attr("text-anchor", "end")
-                    .attr("baseline-shift", "-50%")
-                    .text(rmin + rdelta * i);
+                    .classed("axislabel", true)
+                    .text("rain [l/m")
+                    .append("svg:tspan")
+                    .attr("baseline-shift", "super")
+                    .text("2")
+                    .append("svg:tspan")
+                    .text("]");
                 hm.append("svg:text")
-                    .attr("transform", "translate(" + (s * i) + ",-5)")
+                    .attr("transform", "translate(" + (s*numBins/2) + ",-25)")
                     .attr("text-anchor", "middle")
-                    .text(emin + edelta * i);
-            }
-            hm.append("svg:text")
-                .attr("transform", "translate(-50," + (s * numBins / 2) + ")")
-                .attr("text-anchor", "end")
-                .classed("axislabel", true)
-                .text("rain [l/m")
-                .append("svg:tspan")
-                .attr("baseline-shift", "super")
-                .text("2")
-                .append("svg:tspan")
-                .text("]");
-            hm.append("svg:text")
-                .attr("transform", "translate(" + (s * numBins / 2) + ",-25)")
-                .attr("text-anchor", "middle")
-                .classed("axislabel", true)
-                .text("elevation [m]");
+                    .classed("axislabel", true)
+                    .text("elevation [m]");
 
 
-            // text for selected stuff
-            hm.append("svg:foreignObject")
-                    .attr("width", numBins * s)
-                    .attr("height", 40)
-                    .attr("transform", "translate(0," +
-                        (numBins * s + margin) + ")")
-                    .append("div");
+                // text for selected stuff
+                hm.append("svg:foreignObject")
+                        .attr("width", numBins * s)
+                        .attr("height", 40)
+                        .attr("transform", "translate(0," +
+                            (numBins * s + margin) + ")")
+                        .append("div");
+            });
         });
         </script>
     </body>
