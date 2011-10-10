@@ -208,7 +208,9 @@ circle.site-selected {
                         } else {
                             $(this).parent().tipsy({gravity:'sw'});
                         }
-                        return d.properties.name;
+                        return d.properties.name + ": " +
+                            d.properties["rain-year"] + " l/m2, " +
+                            d.properties["elevation"] + " m";
                     });
 
                 // extract data, get limits
