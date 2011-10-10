@@ -106,13 +106,12 @@ circle.site-selected {
                             lab.html(sSites.length > 0 ?
                                 sSites.length + " sites selected" :
                                 "");
-                            sites.selectAll("circle.site-selected")
-                                .classed("site-selected", false);
-                            sites.selectAll("circle.site").data(sSites,
+                            var sel = sites.selectAll("circle").data(sSites,
                                 function(e) {
                                     return e.properties.ObjectID;
-                                })
-                                .classed("site-selected", true);
+                                });
+                            sel.classed("site-selected", true);
+                            sel.exit().classed("site-selected", false);
                         }
                     })
                     .on("mouseover", function(d, i) {
@@ -292,9 +291,7 @@ circle.site-selected {
                     .attr("height", s)
                     .on("click", function(d, col) {
                         if(d.length > 0) {
-                            var row = parseInt(d3.select(d3.event.target
-                                    .parentNode).property("row")),
-                                idx = sSites.indexOf(d[0]);
+                            var idx = sSites.indexOf(d[0]);
                             if(idx > -1) {
                                 d3.select(this).classed("selected", false);
                                 sSites.splice(idx, d.length);
@@ -305,13 +302,12 @@ circle.site-selected {
                             glab.html(sSites.length > 0 ?
                                 sSites.length + " sites selected" :
                                 "");
-                            sites.selectAll("circle.site-selected")
-                                .classed("site-selected", false);
-                            sites.selectAll("circle.site").data(sSites,
+                            var sel = sites.selectAll("circle").data(sSites,
                                 function(e) {
                                     return e.properties.ObjectID;
-                                })
-                                .classed("site-selected", true);
+                                });
+                            sel.classed("site-selected", true);
+                            sel.exit().classed("site-selected", false);
                         }
                     })
                     .on("mouseover", function(d, col) {
