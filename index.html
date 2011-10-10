@@ -90,6 +90,19 @@ circle.site-selected {
 
     <body>
         <script type="text/javascript">
+        function transpose(a) {
+            var w = a.length ? a.length : 0,
+                    h = a[0] instanceof Array ? a[0].length : 0;
+            if(h === 0 || w === 0) { return []; }
+            var i, j, t = [];
+            for(i=0; i<h; i++) {
+                t[i] = [];
+                for(j=0; j<w; j++) {
+                    t[i][j] = a[j][i];
+                }
+            }
+            return t;
+        };
         function nsort(a, b) {
             return a - b;
         }
@@ -193,10 +206,16 @@ circle.site-selected {
                             .range(["rgb(255,255,255)", "rgb(0,0,0)"]);
 
                 // draw heatmap
-                var hm = svg.append("svg:g")
+                var graph = svg.append("svg:g")
                         .attr("transform", "translate(" +
-                            (window.innerWidth - (3 * margin) - (numBins * s)) +
+                            (window.innerWidth - (6 * margin) - (numBins * s)) +
                             ", " + (2 * margin) + ")"),
+                    glab = svg.append("svg:foreignObject")
+                            .attr("width", 300)
+                            .attr("height", 40)
+                            .attr("transform", "translate(100,100)")
+                            .append("div"),
+                    hm = graph.append("svg:g"),
                     hmrows = hm.selectAll("g")
                         .data(bins)
                         .enter().append("svg:g")
@@ -241,7 +260,7 @@ circle.site-selected {
                                 d3.select(this).classed("selected", true);
                                 sSites = sSites.concat(d);
                             }
-                            hm.select("div").html(sSites.length > 0 ?
+                            glab.html(sSites.length > 0 ?
                                 sSites.length + " sites selected" :
                                 "");
                             sites.selectAll("circle.site-selected")
@@ -260,13 +279,177 @@ circle.site-selected {
                             rsmax = rmin + (row + 1) * rdelta,
                             esmin = emin + col * edelta,
                             esmax = emin + (col + 1) * edelta;
-                        hm.select("div").html(d.length + " sites <br/>" +
+                        glab.html(d.length + " sites <br/>" +
                             "precipitation " + rsmin + " - " + rsmax +
                             " l/m<sup>2</sup><br/>" + "elevation " + esmin +
                             " - " + esmax + " m");
                     })
                     .on("mouseout", function(d, col) {
-                        hm.select("div").html(sSites.length > 0 ?
+                        glab.html(sSites.length > 0 ?
+                            sSites.length + " sites selected" : "");
+                    });
+                // marginal distributions
+                var tbins = transpose(bins),
+                    rtotmax = d3.max($.map(bins, function(d) {
+                                return d3.sum(d.map(function(e) {
+                                        return e.length;
+                                    }));
+                                })),
+                    etotmax = d3.max($.map(tbins, function(d) {
+                                return d3.sum(d.map(function(e) {
+                                        return e.length;
+                                    }));
+                                })),
+                    rsscale = d3.scale.pow().exponent(.5)
+                            .domain([0, rtotmax])
+                            .range([0, 100]),
+                    rcscale = d3.scale.linear()
+                            .domain([0, numBins-1])
+                            .range(["#aaf", "#00f"]),
+                    esscale = d3.scale.pow().exponent(.5)
+                            .domain([0, etotmax])
+                            .range([0, 100]),
+                    ecscale = d3.scale.linear().domain([
+                              -32768, 0, 100, 1000, 2000, 3000
+                            ]).range([
+                              "rgb(30, 120, 30)",
+                              "rgb(30, 120, 30)",
+                              "rgb(125, 125, 35)",
+                              "rgb(100, 25, 25)",
+                              "rgb(200, 200, 200)",
+                              "rgb(255, 255, 255)"
+                          ]),
+                    vert = graph.append("svg:g")
+                            .attr("transform", "translate(0," +
+                                    (s*numBins+s/2) + ")"),
+                    hor = graph.append("svg:g")
+                            .attr("transform", "translate(" +
+                                    (s*numBins+s/2) + ",0)");
+                // horizontal
+                hor.selectAll("rect")
+                    .data(bins).enter()
+                    .append("svg:rect")
+                    .attr("transform", function(d, i) {
+                            return "translate(0," + (s * i) + ")";
+                        })
+                    .attr("width", function(d) {
+                            return rsscale(d3.sum($.map(d, function(e) {
+                                    return e.length;
+                                })));
+                        })
+                    .attr("height", s)
+                    .attr("fill", function(d, i) { return rcscale(i); });
+                hor.selectAll("rect.overlay")
+                    .data(bins).enter()
+                    .append("svg:rect")
+                    .attr("class", "overlay")
+                    .attr("transform", function(d, i) {
+                            return "translate(0," + (s * i) + ")";
+                        })
+                    .attr("width", function(d) {
+                            return rsscale(d3.sum($.map(d, function(e) {
+                                    return e.length;
+                                })));
+                        })
+                    .attr("height", s)
+                    .on("click", function(d, i) {
+                        var rsites = $.map(d, function(e) { return e; });
+                        if(rsites.length > 0) {
+                            var idx = sSites.indexOf(rsites[0]);
+                            if(idx > -1) {
+                                d3.select(this).classed("selected", false);
+                                sSites.splice(idx, rsites.length);
+                            } else {
+                                d3.select(this).classed("selected", true);
+                                sSites = sSites.concat(rsites);
+                            }
+                            glab.html(sSites.length > 0 ?
+                                sSites.length + " sites selected" :
+                                "");
+                            sites.selectAll("circle.site-selected")
+                                .classed("site-selected", false);
+                            sites.selectAll("circle.site").data(sSites,
+                                function(e) {
+                                    return e.properties.ObjectID;
+                                })
+                                .classed("site-selected", true);
+                        }
+                    })
+                    .on("mouseover", function(d, i) {
+                        var rsmin = rmin + i * rdelta,
+                            rsmax = rmin + (i + 1) * rdelta,
+                            num = d3.sum($.map(d, function(e) {
+                                    return e.length;
+                                }));
+                        glab.html(num + " sites <br/>" +
+                            "precipitation " + rsmin + " - " + rsmax +
+                            " l/m<sup>2</sup>");
+                    })
+                    .on("mouseout", function(d, col) {
+                        glab.html(sSites.length > 0 ?
+                            sSites.length + " sites selected" : "");
+                    });
+                // vertical
+                vert.selectAll("rect")
+                    .data(tbins).enter()
+                    .append("svg:rect")
+                    .attr("transform", function(d, i) {
+                            return "translate(" + (s * i) + ",0)";
+                        })
+                    .attr("height", function(d) {
+                            return esscale(d3.sum($.map(d, function(e) {
+                                    return e.length;
+                                })));
+                        })
+                    .attr("width", s)
+                    .attr("fill", function(d, i) { return ecscale(i*edelta); });
+                vert.selectAll("rect.overlay")
+                    .data(tbins).enter()
+                    .append("svg:rect")
+                    .attr("class", "overlay")
+                    .attr("transform", function(d, i) {
+                            return "translate(" + (s * i) + ",0)";
+                        })
+                    .attr("height", function(d) {
+                            return esscale(d3.sum($.map(d, function(e) {
+                                    return e.length;
+                                })));
+                        })
+                    .attr("width", s)
+                    .on("click", function(d, i) {
+                        var esites = $.map(d, function(e) { return e; });
+                        if(esites.length > 0) {
+                            var idx = sSites.indexOf(esites[0]);
+                            if(idx > -1) {
+                                d3.select(this).classed("selected", false);
+                                sSites.splice(idx, esites.length);
+                            } else {
+                                d3.select(this).classed("selected", true);
+                                sSites = sSites.concat(esites);
+                            }
+                            glab.html(sSites.length > 0 ?
+                                sSites.length + " sites selected" :
+                                "");
+                            sites.selectAll("circle.site-selected")
+                                .classed("site-selected", false);
+                            sites.selectAll("circle.site").data(sSites,
+                                function(e) {
+                                    return e.properties.ObjectID;
+                                })
+                                .classed("site-selected", true);
+                        }
+                    })
+                    .on("mouseover", function(d, i) {
+                        var esmin = emin + i * edelta,
+                            esmax = emin + (i + 1) * edelta,
+                            num = d3.sum($.map(d, function(e) {
+                                    return e.length;
+                                }));
+                        glab.html(num + " sites <br/>" +
+                            "elevation " + esmin + " - " + esmax + " m");
+                    })
+                    .on("mouseout", function(d, col) {
+                        glab.html(sSites.length > 0 ?
                             sSites.length + " sites selected" : "");
                     });
                 // labels
@@ -296,15 +479,6 @@ circle.site-selected {
                     .attr("text-anchor", "middle")
                     .classed("axislabel", true)
                     .text("elevation [m]");
-
-
-                // text for selected stuff
-                hm.append("svg:foreignObject")
-                        .attr("width", numBins * s)
-                        .attr("height", 40)
-                        .attr("transform", "translate(0," +
-                            (numBins * s + margin) + ")")
-                        .append("div");
             });
         });
         </script>
