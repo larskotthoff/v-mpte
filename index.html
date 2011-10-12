@@ -129,6 +129,20 @@ circle.site-selected {
             }
         }
 
+        function mkWOverlay(ele, data, callback, bcallback, ocallback) {
+            ele.selectAll("rect")
+                .data(data).enter()
+                .append("svg:rect")
+                .call(callback)
+                .call(bcallback);
+            ele.selectAll("rect.overlay")
+                .data(data).enter()
+                .append("svg:rect")
+                .attr("class", "overlay")
+                .call(callback)
+                .call(ocallback);
+        }
+
         function mkGraph(graph, label, o, s) {
             var colour = d3.scale.pow().exponent(.3)
                         .domain([0, o.nmax])
@@ -223,41 +237,27 @@ circle.site-selected {
                             .attr("transform", "translate(" + 
                                 (i == 0 ? -35 : 0) + "," +
                                 (i == 0 ? 0 : -20) + ")");
-                me.selectAll("rect")
-                    .data(m).enter()
-                    .append("svg:rect")
-                    .attr("transform", function(d, j) {
-                            return "translate(" +
-                                (i == 1 ? s*j : -sscale(d.length)) + "," +
-                                (i == 1 ? -sscale(d.length) : s*j) + ")";
-                        })
-                    .attr("width", function(d) {
-                            return (i == 0 ? sscale(d.length) : s);
-                        })
-                    .attr("height", function(d) {
-                            return (i == 1 ? sscale(d.length) : s);
-                        })
-                    .attr("fill", function(d, j) {
-                            return (i == 0 ? cscales[i](j) : cscales[i](j *
-                                o.limits[i][1]));
-                        });
-                me.selectAll("rect.overlay")
-                    .data(m).enter()
-                    .append("svg:rect")
-                    .attr("class", "overlay")
-                    .attr("transform", function(d, j) {
-                            return "translate(" +
-                                (i == 1 ? s*j : -sscale(d.length)) + "," +
-                                (i == 1 ? -sscale(d.length) : s*j) + ")";
-                        })
-                    .attr("width", function(d) {
-                            return (i == 0 ? sscale(d.length) : s);
-                        })
-                    .attr("height", function(d) {
-                            return (i == 1 ? sscale(d.length) : s);
-                        })
-                    .call(setupHandlers(descs[i], o.limits[i], label, sites,
-                        sSites));
+                mkWOverlay(me, m, function() {
+                        this.attr("transform", function(d, j) {
+                                return "translate(" +
+                                    (i == 1 ? s*j : -sscale(d.length)) + "," +
+                                    (i == 1 ? -sscale(d.length) : s*j) + ")";
+                            })
+                            .attr("width", function(d) {
+                                return (i == 0 ? sscale(d.length) : s);
+                            })
+                            .attr("height", function(d) {
+                                return (i == 1 ? sscale(d.length) : s);
+                            });
+                        return this;
+                    }, function() {
+                        this.attr("fill", function(d, j) {
+                                return (i == 0 ? cscales[i](j) : cscales[i](j *
+                                    o.limits[i][1]));
+                            });
+                    },
+                    setupHandlers(descs[i], o.limits[i], label, sites, sSites));
+                // labels
                 hm.append("svg:text")
                     .attr("transform", "translate(-50," + (s*numBins/2) + ")")
                     .attr("transform", function(d, j) {
@@ -268,7 +268,6 @@ circle.site-selected {
                     .attr("text-anchor", "middle")
                     .classed("axislabel", true)
                     .text(descs[i][0] + " " + descs[i][1]);
-                // labels
                 for(var j = 0; j <= numBins; j++) {
                     hm.append("svg:text")
                         .attr("transform", function() {
