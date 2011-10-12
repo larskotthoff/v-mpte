@@ -90,7 +90,7 @@ circle.site-selected {
 
     <body>
         <script type="text/javascript">
-        function setupHandlers(min, delta, lab, sites, sSites) {
+        function setupHandlers(desc, limits, lab, sites, sSites) {
             return function() {
                 this.on("click", function(d, i) {
                         var thissites = $.map(d, function(e) { return e; });
@@ -107,21 +107,19 @@ circle.site-selected {
                                 sSites.length + " sites selected" :
                                 "");
                             var sel = sites.selectAll("circle").data(sSites,
-                                function(e) {
-                                    return e.properties.ObjectID;
-                                });
+                                    function(e) {
+                                        return e.geometry.coordinates;
+                                    });
                             sel.classed("site-selected", true);
                             sel.exit().classed("site-selected", false);
                         }
                     })
                     .on("mouseover", function(d, i) {
-                        var smin = min + i * delta,
-                            smax = min + (i + 1) * delta,
-                            num = d3.sum($.map(d, function(e) {
-                                    return e.length;
-                                }));
-                        lab.html(num + " sites <br/>" +
-                            "elevation " + smin + " - " + smax + " m");
+                        var smin = limits[0] + i * limits[1],
+                            smax = limits[0] + (i + 1) * limits[1];
+                        lab.html(d.length + " sites <br/>" +
+                            desc[0] + " " + smin + " - " + smax + " " +
+                            desc[1]);
                     })
                     .on("mouseout", function(d, col) {
                         lab.html(sSites.length > 0 ?
@@ -129,19 +127,6 @@ circle.site-selected {
                     });
             }
         }
-        function transpose(a) {
-            var w = a.length ? a.length : 0,
-                    h = a[0] instanceof Array ? a[0].length : 0;
-            if(h === 0 || w === 0) { return []; }
-            var i, j, t = [];
-            for(i=0; i<h; i++) {
-                t[i] = [];
-                for(j=0; j<w; j++) {
-                    t[i][j] = a[j][i];
-                }
-            }
-            return t;
-        };
         function nsort(a, b) {
             return a - b;
         }
@@ -161,6 +146,79 @@ circle.site-selected {
             }
             return m;
         }
+
+        function mkMatrixRe(s, i) {
+            if(i > 0) {
+                var m = new Array(s);
+                for(var j = 0; j < s; j++) {
+                    m[j] = mkMatrixRe(s, i-1);
+                }
+                return m;
+            } else {
+                return [];
+            }
+        }
+
+        function assignBinRe(d, bins, marginals, limits, props, i) {
+            if(i < props.length) {
+                var nbin = Math.floor((d.properties[props[i]] -
+                        limits[i][0]) / limits[i][1]);
+                marginals[i][nbin].push(d);
+                assignBinRe(d, bins[nbin], marginals, limits, props, i+1);
+            } else {
+                bins.push(d);
+            }
+        }
+
+        function getMaxRe(a) {
+            if(a[0] instanceof Array) {
+                return d3.max($.map(a, function(b) {
+                            return getMaxRe(b);
+                        }));
+            } else {
+                return a.length;
+            }
+        }
+
+        function bin(numBins, raw) {
+            if(arguments.length < 3) { return null; }
+            var args = [], limits = [], o = new Object();
+            for(var i = 2; i < arguments.length; i++) {
+                args.push(arguments[i]);
+            }
+            $.each(args, function(i, p) {
+                var data = $.map(raw, function(d) {
+                            return d.properties[p];
+                        }).sort(nsort),
+                    tmp = adjLims(data[0], data[data.length-1]),
+                    dmin = tmp[0], dmax = tmp[1],
+                    delta = (dmax - dmin) / numBins;
+                limits.push([dmin, delta, dmax]);
+            });
+
+            var bins = mkMatrixRe(numBins, args.length),
+                marginals = new Array(args.length);
+            for(var i = 0; i < marginals.length; i++) {
+                marginals[i] = mkMatrixRe(numBins, 1);
+            }
+
+            $.each(raw, function(i, d) {
+                assignBinRe(d, bins, marginals, limits, args, 0);
+            });
+
+            var maxs = new Array(marginals.length);
+            for(var i = 0; i < marginals.length; i++) {
+                maxs[i] = getMaxRe(marginals[0]);
+            }
+
+            o.bins = bins;
+            o.marginals = marginals;
+            o.limits = limits;
+            o.nmax = getMaxRe(bins);
+            o.maxs = maxs;
+            return o;
+        }
+
         var proj = d3.geo.mercator().scale(1).translate([0,0]),
             path = d3.geo.path().projection(proj).pointRadius(1),
             margin = 25, s = 30,
@@ -212,38 +270,9 @@ circle.site-selected {
                             d.properties["elevation"] + " m";
                     });
 
-                // extract data, get limits
-                var rains = $.map(json.features, function(d, i) {
-                            return d.properties["rain-year"];
-                        }).sort(nsort),
-                    elevations = $.map(json.features, function(d, i) {
-                        var e = d.properties["elevation"];
-                        return e < 0 ? 0 : e;
-                    }).sort(nsort),
-                    tmp = adjLims(rains[0], rains[rains.length-1]),
-                    rmin = tmp[0], rmax = tmp[1],
-                    rdelta = (rmax - rmin) / numBins,
-                    tmp = adjLims(elevations[0],
-                            elevations[elevations.length-1]),
-                    emin = tmp[0], emax = tmp[1],
-                    edelta = (emax - emin) / numBins,
-                    bins = mkMatrix(numBins);
-
-                // populate bins
-                $.each(json.features, function(i, d) {
-                    var rbin = Math.floor((d.properties["rain-year"] - rmin) /
-                                rdelta),
-                        e = d.properties["elevation"], e = e < 0 ? 0 : e,
-                        ebin = Math.floor((e - emin) / edelta);
-                    bins[rbin][ebin].push(d);
-                });
-                var nmax = d3.max($.map(bins, function(d, i) {
-                            return d3.max($.map(d, function(e, j) {
-                                    return e.length;
-                                }));
-                        })),
+                var o = bin(numBins, json.features, "rain-year", "elevation"),
                     colour = d3.scale.pow().exponent(.3)
-                            .domain([0, nmax])
+                            .domain([0, o.nmax])
                             .range(["rgb(255,255,255)", "rgb(0,0,0)"]);
 
                 // draw heatmap
@@ -258,7 +287,7 @@ circle.site-selected {
                             .append("div"),
                     hm = graph.append("svg:g"),
                     hmrows = hm.selectAll("g")
-                        .data(bins)
+                        .data(o.bins)
                         .enter().append("svg:g")
                         .attr("transform", function(d, i) {
                                 return "translate(0," + (s * i) + ")";
@@ -273,7 +302,7 @@ circle.site-selected {
                     .attr("height", s)
                     .attr("fill", function(d) { return colour(d.length); });
                 var hmrowso = hm.selectAll("g.overlay")
-                        .data(bins)
+                        .data(o.bins)
                         .enter().append("svg:g")
                         .attr("class", "overlay")
                         .property("row", function(d, i) { return i; })
@@ -303,9 +332,9 @@ circle.site-selected {
                                 sSites.length + " sites selected" :
                                 "");
                             var sel = sites.selectAll("circle").data(sSites,
-                                function(e) {
-                                    return e.properties.ObjectID;
-                                });
+                                    function(e) {
+                                        return e.geometry.coordinates;
+                                    });
                             sel.classed("site-selected", true);
                             sel.exit().classed("site-selected", false);
                         }
@@ -313,10 +342,10 @@ circle.site-selected {
                     .on("mouseover", function(d, col) {
                         var row = parseInt(d3.select(d3.event.target.parentNode)
                                 .property("row")),
-                            rsmin = rmin + row * rdelta,
-                            rsmax = rmin + (row + 1) * rdelta,
-                            esmin = emin + col * edelta,
-                            esmax = emin + (col + 1) * edelta;
+                            rsmin = o.limits[0][0] + row * o.limits[0][1],
+                            rsmax = o.limits[0][0] + (row + 1) * o.limits[0][1],
+                            esmin = o.limits[1][0] + col * o.limits[1][1],
+                            esmax = o.limits[1][0] + (col + 1) * o.limits[1][1];
                         glab.html(d.length + " sites <br/>" +
                             "precipitation " + rsmin + " - " + rsmax +
                             " l/m<sup>2</sup><br/>" + "elevation " + esmin +
@@ -327,30 +356,18 @@ circle.site-selected {
                             sSites.length + " sites selected" : "");
                     });
                 // marginal distributions
-                var tbins = transpose(bins),
-                    rtotmax = d3.max($.map(bins, function(d) {
-                                return d3.sum(d.map(function(e) {
-                                        return e.length;
-                                    }));
-                                })),
-                    etotmax = d3.max($.map(tbins, function(d) {
-                                return d3.sum(d.map(function(e) {
-                                        return e.length;
-                                    }));
-                                })),
-                    rsscale = d3.scale.pow().exponent(.5)
-                            .domain([0, rtotmax])
+                var rsscale = d3.scale.pow().exponent(.5)
+                            .domain([0, o.maxs[0]])
                             .range([0, 100]),
                     rcscale = d3.scale.linear()
                             .domain([0, numBins-1])
                             .range(["#aaf", "#00f"]),
                     esscale = d3.scale.pow().exponent(.5)
-                            .domain([0, etotmax])
+                            .domain([0, o.maxs[1]])
                             .range([0, 100]),
-                    ecscale = d3.scale.linear().domain([
-                              -32768, 0, 100, 1000, 2000, 3000
-                            ]).range([
-                              "rgb(30, 120, 30)",
+                    ecscale = d3.scale.linear()
+                        .domain([0, 100, 1000, 2000, 3000])
+                        .range([
                               "rgb(30, 120, 30)",
                               "rgb(125, 125, 35)",
                               "rgb(100, 25, 25)",
@@ -365,71 +382,59 @@ circle.site-selected {
                                     (s*numBins+s/2) + ",0)");
                 // horizontal
                 hor.selectAll("rect")
-                    .data(bins).enter()
+                    .data(o.marginals[0]).enter()
                     .append("svg:rect")
                     .attr("transform", function(d, i) {
                             return "translate(0," + (s * i) + ")";
                         })
-                    .attr("width", function(d) {
-                            return rsscale(d3.sum($.map(d, function(e) {
-                                    return e.length;
-                                })));
-                        })
+                    .attr("width", function(d) { return rsscale(d.length); })
                     .attr("height", s)
                     .attr("fill", function(d, i) { return rcscale(i); });
                 hor.selectAll("rect.overlay")
-                    .data(bins).enter()
+                    .data(o.marginals[0]).enter()
                     .append("svg:rect")
                     .attr("class", "overlay")
                     .attr("transform", function(d, i) {
                             return "translate(0," + (s * i) + ")";
                         })
-                    .attr("width", function(d) {
-                            return rsscale(d3.sum($.map(d, function(e) {
-                                    return e.length;
-                                })));
-                        })
+                    .attr("width", function(d) { return rsscale(d.length); })
                     .attr("height", s)
-                    .call(setupHandlers(rmin, rdelta, glab, sites, sSites));
+                    .call(setupHandlers(["rain", "l/m<sup>2</sup>"],
+                            o.limits[0], glab, sites, sSites));
                 // vertical
                 vert.selectAll("rect")
-                    .data(tbins).enter()
+                    .data(o.marginals[1]).enter()
                     .append("svg:rect")
                     .attr("transform", function(d, i) {
                             return "translate(" + (s * i) + ",0)";
                         })
-                    .attr("height", function(d) {
-                            return esscale(d3.sum($.map(d, function(e) {
-                                    return e.length;
-                                })));
-                        })
+                    .attr("height", function(d) { return esscale(d.length); })
                     .attr("width", s)
-                    .attr("fill", function(d, i) { return ecscale(i*edelta); });
+                    .attr("fill", function(d, i) {
+                            return ecscale(i*o.limits[1][1]);
+                        });
                 vert.selectAll("rect.overlay")
-                    .data(tbins).enter()
+                    .data(o.marginals[1]).enter()
                     .append("svg:rect")
                     .attr("class", "overlay")
                     .attr("transform", function(d, i) {
                             return "translate(" + (s * i) + ",0)";
                         })
-                    .attr("height", function(d) {
-                            return esscale(d3.sum($.map(d, function(e) {
-                                    return e.length;
-                                })));
-                        })
+                    .attr("height", function(d) { return esscale(d.length); })
                     .attr("width", s)
-                    .call(setupHandlers(emin, edelta, glab, sites, sSites));
+                    .call(setupHandlers(["elevation", "m"],
+                            o.limits[1], glab, sites, sSites));
                 // labels
                 for(var i = 0; i <= numBins; i++) {
                     hm.append("svg:text")
                         .attr("transform", "translate(-5," + (s * i) + ")")
                         .attr("text-anchor", "end")
                         .attr("baseline-shift", "-50%")
-                        .text(rmin + rdelta * i);
+                        .text(o.limits[0][0] + o.limits[0][1] * i);
                     hm.append("svg:text")
                         .attr("transform", "translate(" + (s * i) + ",-5)")
                         .attr("text-anchor", "middle")
-                        .text(emin + edelta * i);
+                        .text(o.limits[1][0] + o.limits[1][1] * i);
                 }
                 hm.append("svg:text")
                     .attr("transform", "translate(-50," + (s*numBins/2) + ")")
