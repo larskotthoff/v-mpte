@@ -2,6 +2,7 @@
 <html>
     <head>
         <title>Precipitation at Maya sites</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
         <script type="text/javascript" src="http://mbostock.github.com/d3/d3.min.js"></script>
         <script type="text/javascript" src="http://mbostock.github.com/d3/d3.geo.min.js"></script>
         <script type="text/javascript" src="http://mbostock.github.com/d3/d3.layout.min.js"></script>
@@ -266,7 +267,7 @@ circle.site-selected {
                             $(this).parent().tipsy({gravity:'sw'});
                         }
                         return d.properties.name + ": " +
-                            d.properties["rain-year"] + " l/m2, " +
+                            d.properties["rain-year"] + " l/m², " +
                             d.properties["elevation"] + " m";
                     });
 
@@ -348,7 +349,7 @@ circle.site-selected {
                             esmax = o.limits[1][0] + (col + 1) * o.limits[1][1];
                         glab.html(d.length + " sites <br/>" +
                             "precipitation " + rsmin + " - " + rsmax +
-                            " l/m<sup>2</sup><br/>" + "elevation " + esmin +
+                            " l/m²<br/>" + "elevation " + esmin +
                             " - " + esmax + " m");
                     })
                     .on("mouseout", function(d, col) {
@@ -399,7 +400,7 @@ circle.site-selected {
                         })
                     .attr("width", function(d) { return rsscale(d.length); })
                     .attr("height", s)
-                    .call(setupHandlers(["rain", "l/m<sup>2</sup>"],
+                    .call(setupHandlers(["rain", "l/m²"],
                             o.limits[0], glab, sites, sSites));
                 // vertical
                 vert.selectAll("rect")
@@ -440,12 +441,7 @@ circle.site-selected {
                     .attr("transform", "translate(-50," + (s*numBins/2) + ")")
                     .attr("text-anchor", "end")
                     .classed("axislabel", true)
-                    .text("rain [l/m")
-                    .append("svg:tspan")
-                    .attr("baseline-shift", "super")
-                    .text("2")
-                    .append("svg:tspan")
-                    .text("]");
+                    .text("rain [l/m²]");
                 hm.append("svg:text")
                     .attr("transform", "translate(" + (s*numBins/2) + ",-25)")
                     .attr("text-anchor", "middle")
