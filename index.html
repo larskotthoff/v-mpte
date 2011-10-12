@@ -221,14 +221,15 @@ circle.site-selected {
                             .range([0, 100]),
                     me = graph.append("svg:g")
                             .attr("transform", "translate(" + 
-                                (i == 0 ? s*numBins+s/2 : 0) + "," +
-                                (i == 0 ? 0 : s*numBins+s/2) + ")");
+                                (i == 0 ? -35 : 0) + "," +
+                                (i == 0 ? 0 : -20) + ")");
                 me.selectAll("rect")
                     .data(m).enter()
                     .append("svg:rect")
                     .attr("transform", function(d, j) {
-                            return "translate(" + (i == 1 ? s*j : 0) + "," +
-                                (i == 1 ? 0 : s*j) + ")";
+                            return "translate(" +
+                                (i == 1 ? s*j : -sscale(d.length)) + "," +
+                                (i == 1 ? -sscale(d.length) : s*j) + ")";
                         })
                     .attr("width", function(d) {
                             return (i == 0 ? sscale(d.length) : s);
@@ -245,8 +246,9 @@ circle.site-selected {
                     .append("svg:rect")
                     .attr("class", "overlay")
                     .attr("transform", function(d, j) {
-                            return "translate(" + (i == 1 ? s*j : 0) + "," +
-                                (i == 1 ? 0 : s*j) + ")";
+                            return "translate(" +
+                                (i == 1 ? s*j : -sscale(d.length)) + "," +
+                                (i == 1 ? -sscale(d.length) : s*j) + ")";
                         })
                     .attr("width", function(d) {
                             return (i == 0 ? sscale(d.length) : s);
@@ -256,29 +258,31 @@ circle.site-selected {
                         })
                     .call(setupHandlers(descs[i], o.limits[i], label, sites,
                         sSites));
-            });
-            // labels
-            for(var i = 0; i <= numBins; i++) {
                 hm.append("svg:text")
-                    .attr("transform", "translate(-5," + (s * i) + ")")
-                    .attr("text-anchor", "end")
-                    .attr("baseline-shift", "-50%")
-                    .text(o.limits[0][0] + o.limits[0][1] * i);
-                hm.append("svg:text")
-                    .attr("transform", "translate(" + (s * i) + ",-5)")
+                    .attr("transform", "translate(-50," + (s*numBins/2) + ")")
+                    .attr("transform", function(d, j) {
+                            return "translate(" +
+                                (i == 0 ? -130 : s*numBins/2) + "," +
+                                (i == 0 ? s*numBins/2 : -100) + ")";
+                        })
                     .attr("text-anchor", "middle")
-                    .text(o.limits[1][0] + o.limits[1][1] * i);
-            }
-            hm.append("svg:text")
-                .attr("transform", "translate(-50," + (s*numBins/2) + ")")
-                .attr("text-anchor", "end")
-                .classed("axislabel", true)
-                .text("rain [l/m²]");
-            hm.append("svg:text")
-                .attr("transform", "translate(" + (s*numBins/2) + ",-25)")
-                .attr("text-anchor", "middle")
-                .classed("axislabel", true)
-                .text("elevation [m]");
+                    .classed("axislabel", true)
+                    .text(descs[i][0] + " " + descs[i][1]);
+                // labels
+                for(var j = 0; j <= numBins; j++) {
+                    hm.append("svg:text")
+                        .attr("transform", function() {
+                                return "translate(" +
+                                    (i == 0 ? -18 : s*j) + "," +
+                                    (i == 0 ? s*j : -5) + ")";
+                            })
+                        .attr("text-anchor", "middle")
+                        .attr("baseline-shift", function() {
+                                return (i == 0 ? "-50%" : "0%");
+                            })
+                        .text(o.limits[i][0] + o.limits[i][1] * j);
+                }
+            });
         }
 
         function nsort(a, b) {
@@ -427,8 +431,8 @@ circle.site-selected {
                 var o = bin(numBins, json.features, "rain-year", "elevation"),
                     graph = svg.append("svg:g")
                         .attr("transform", "translate(" +
-                            (window.innerWidth - (6 * margin) - (numBins * s)) +
-                            ", " + (2 * margin) + ")"),
+                            (window.innerWidth - (4 * margin) - (numBins * s)) +
+                            ", " + (2 * margin + 120) + ")"),
                     glab = svg.append("svg:foreignObject")
                             .attr("width", 300)
                             .attr("height", 40)
