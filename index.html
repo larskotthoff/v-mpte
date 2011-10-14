@@ -395,7 +395,9 @@ circle.site-selected {
                 sites.selectAll("circle")
                     .data(json.features)
                     .enter().append("svg:circle")
-                    .attr("r", 1)
+                    .attr("r", function(d) {
+                            return Math.max(1, 4 - d.properties.rank);
+                        })
                     .attr("cx", function(d) {
                             return proj(d.geometry.coordinates)[0];
                         })
