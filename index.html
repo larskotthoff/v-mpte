@@ -172,13 +172,23 @@ circle.site-selected {
         }
 
         function mkGraph(descs, o) {
-            var colour = d3.scale.pow().exponent(.3)
-                        .domain([0, o.nmax])
-                        .range(["rgb(255,255,255)", "rgb(0,0,0)"]),
+            var colour = d3.scale.pow().exponent(.2)
+                        .domain([0, o.nmax]),
+                cscales = [d3.scale.linear()
+                            .domain([0, numBins-1])
+                            .range(["#aaf", "#00f"]),
+                           d3.scale.linear()
+                            .domain([0, 100, 1000, 2000, 3000])
+                            .range(["rgb(30, 120, 30)",
+                                    "rgb(125, 125, 35)",
+                                    "rgb(100, 25, 25)",
+                                    "rgb(200, 200, 200)",
+                                    "rgb(255, 255, 255)"])],
                 hm = graph.append("svg:g"),
                 hmrows = hm.selectAll("g")
                     .data(o.bins)
                     .enter().append("svg:g")
+                    .property("row", function(d, i) { return i; })
                     .attr("transform", function(d, i) {
                             return "translate(0," + (s * i) + ")";
                         }),
@@ -198,7 +208,14 @@ circle.site-selected {
                     .attr("height", s)
                 return this;
             }, function() {
-                this.attr("fill", function(d) { return colour(d.length); });
+                this.attr("fill", function(d, col) {
+                    var row = parseInt(d3.select(this.parentNode)
+                            .property("row")),
+                        rcolour = cscales[0](row),
+                        ecolour = cscales[1](col * o.limits[1][1]),
+                        blend = d3.scale.linear().range([rcolour, ecolour])(.5);
+                    return colour.range(["white", blend])(d.length);
+                });
             }, function() {
                 this.on("click", function(d) {
                         updateSelected(this, d);
@@ -218,16 +235,6 @@ circle.site-selected {
                     .on("mouseout", resetLabel);
             });
             // marginal distributions
-            var cscales = [d3.scale.linear()
-                            .domain([0, numBins-1])
-                            .range(["#aaf", "#00f"]),
-                           d3.scale.linear()
-                            .domain([0, 100, 1000, 2000, 3000])
-                            .range(["rgb(30, 120, 30)",
-                                    "rgb(125, 125, 35)",
-                                    "rgb(100, 25, 25)",
-                                    "rgb(200, 200, 200)",
-                                    "rgb(255, 255, 255)"])];
             $.each(o.marginals, function(i, m) {
                 var sscale = d3.scale.pow().exponent(.5)
                             .domain([0, o.maxs[i]])
