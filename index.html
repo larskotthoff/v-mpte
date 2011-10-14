@@ -91,6 +91,7 @@ circle.site-selected {
 
     <body>
         <script type="text/javascript">
+    (function() {
         function updateSelected(ele, d, label) {
             if(d.length > 0) {
                 var idx = sSites.indexOf(d[0]);
@@ -148,7 +149,7 @@ circle.site-selected {
                 .call(ocallback);
         }
 
-        function mkGraph(graph, label, o, s) {
+        function mkGraph(graph, descs, label, o, s) {
             var colour = d3.scale.pow().exponent(.3)
                         .domain([0, o.nmax])
                         .range(["rgb(255,255,255)", "rgb(0,0,0)"]),
@@ -188,9 +189,9 @@ circle.site-selected {
                             esmin = o.limits[1][0] + col * o.limits[1][1],
                             esmax = o.limits[1][0] + (col + 1) * o.limits[1][1];
                         label.html(d.length + " sites <br/>" +
-                            "precipitation " + rsmin + " - " + rsmax +
-                            " l/m²<br/>" + "elevation " + esmin +
-                            " - " + esmax + " m");
+                            descs[0][0] + " " + rsmin + " - " + rsmax + " " +
+                            descs[0][1] + "<br/>" + descs[1][0] + " " + esmin +
+                            " - " + esmax + " " + descs[1][1]);
                     })
                     .on("mouseout", resetLabel(label));
             });
@@ -204,8 +205,7 @@ circle.site-selected {
                                     "rgb(125, 125, 35)",
                                     "rgb(100, 25, 25)",
                                     "rgb(200, 200, 200)",
-                                    "rgb(255, 255, 255)"])],
-                descs = [["rain", "l/m²"], ["elevation", "m"]];
+                                    "rgb(255, 255, 255)"])];
             $.each(o.marginals, function(i, m) {
                 var sscale = d3.scale.pow().exponent(.5)
                             .domain([0, o.maxs[i]])
@@ -293,12 +293,12 @@ circle.site-selected {
             }
         }
 
-        function assignBinRe(d, bins, marginals, limits, props, i) {
-            if(i < props.length) {
-                var nbin = Math.floor((d.properties[props[i]] -
+        function assignBinRe(d, bins, marginals, limits, funcs, i) {
+            if(i < funcs.length) {
+                var nbin = Math.floor((funcs[i](d) -
                         limits[i][0]) / limits[i][1]);
                 marginals[i][nbin].push(d);
-                assignBinRe(d, bins[nbin], marginals, limits, props, i+1);
+                assignBinRe(d, bins[nbin], marginals, limits, funcs, i+1);
             } else {
                 bins.push(d);
             }
@@ -320,9 +320,9 @@ circle.site-selected {
             for(var i = 2; i < arguments.length; i++) {
                 args.push(arguments[i]);
             }
-            $.each(args, function(i, p) {
+            $.each(args, function(i, f) {
                 var data = $.map(raw, function(d) {
-                            return d.properties[p];
+                            return f(d);
                         }).sort(nsort),
                     tmp = adjLims(data[0], data[data.length-1]),
                     dmin = tmp[0], dmax = tmp[1],
@@ -404,7 +404,9 @@ circle.site-selected {
                             d.properties["elevation"] + " m";
                     });
 
-                var o = bin(numBins, json.features, "rain-year", "elevation"),
+                var o = bin(numBins, json.features,
+                            function(d) { return d.properties["rain-year"]; },
+                            function(d) { return d.properties["elevation"]; }),
                     graph = svg.append("svg:g")
                         .attr("transform", "translate(" +
                             (window.innerWidth - (4 * margin) - (numBins * s)) +
@@ -413,10 +415,12 @@ circle.site-selected {
                             .attr("width", 300)
                             .attr("height", 40)
                             .attr("transform", "translate(100,100)")
-                            .append("div");
-                mkGraph(graph, glab, o, s);
+                            .append("div"),
+                    descs = [["precipitation", "l/m²"], ["elevation", "m"]];
+                mkGraph(graph, descs, glab, o, s);
             });
         });
+    })();
         </script>
     </body>
 </html>
