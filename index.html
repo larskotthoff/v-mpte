@@ -257,14 +257,19 @@ circle.site-selected {
                     },
                     setupHandlers(descs[i], o.limits[i], sites));
                 // labels
+                var ds = $.map(o.marginals, function(d) {
+                        return sscale(d3.max([d[numBins/2-1].length,
+                            d[numBins/2].length, d[numBins/2+1].length])) + 10;
+                    });
                 hm.append("svg:text")
-                    .attr("transform", "translate(-50," + (s*numBins/2) + ")")
-                    .attr("transform", function(d, j) {
+                    .attr("transform", function() {
                             return "translate(" +
-                                (i == 0 ? -130 : s*numBins/2) + "," +
-                                (i == 0 ? s*numBins/2 : -100) + ")";
+                                (i == 0 ? -ds[0]-35 : s*numBins/2) + "," +
+                                (i == 0 ? s*numBins/2 : -ds[1]-20) + ")";
                         })
-                    .attr("text-anchor", "middle")
+                    .attr("text-anchor", function() {
+                            return (i == 0 ? "end" : "middle");
+                        })
                     .classed("axislabel", true)
                     .text(descs[i][0] + " " + descs[i][1]);
                 for(var j = 0; j <= numBins; j++) {
