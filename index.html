@@ -261,7 +261,7 @@ circle.site-selected {
                         return sscale(d3.max([d[numBins/2-1].length,
                             d[numBins/2].length, d[numBins/2+1].length])) + 10;
                     });
-                hm.append("svg:text")
+                graph.append("svg:text")
                     .attr("transform", function() {
                             return "translate(" +
                                 (i == 0 ? -ds[0]-35 : s*numBins/2) + "," +
@@ -273,7 +273,7 @@ circle.site-selected {
                     .classed("axislabel", true)
                     .text(descs[i][0] + " " + descs[i][1]);
                 for(var j = 0; j <= numBins; j++) {
-                    hm.append("svg:text")
+                    graph.append("svg:text")
                         .attr("transform", function() {
                                 return "translate(" +
                                     (i == 0 ? -18 : s*j) + "," +
