@@ -124,9 +124,7 @@ circle.site-selected {
                     d3.select(ele).classed("selected", true);
                     sSites = sSites.concat(d);
                 }
-                glab.html(sSites.length > 0 ?
-                    sSites.length + " sites selected" :
-                    "");
+                resetLabel();
                 var sel = sites.selectAll("circle").data(sSites,
                         function(e) {
                             return e.geometry.coordinates;
@@ -137,24 +135,18 @@ circle.site-selected {
         }
         function resetLabel() {
             glab.html(sSites.length > 0 ?
-                sSites.length + " sites selected" : "");
+                sSites.length + " site" + (sSites.length != 1 ? "s" : "") +
+                        " selected" : "");
         }
-
-        function setupHandlers(desc, limits, sites) {
-            return function() {
-                this.on("click", function(d) {
-                        var thissites = $.map(d, function(e) { return e; });
-                        updateSelected(this, thissites);
-                    })
-                    .on("mouseover", function(d, i) {
-                        var smin = limits[0] + i * limits[1],
-                            smax = limits[0] + (i + 1) * limits[1];
-                        glab.html(d.length + " sites <br/>" +
-                            desc[0] + " " + smin + " - " + smax + " " +
-                            desc[1]);
-                    })
-                    .on("mouseout", resetLabel);
-            }
+        function updateLabel(o, descs, num, idxs) {
+            var s = num + " site" + (num != 1 ? "s" : "");
+            $.each(idxs, function(i, idx) {
+                var tmin = o.limits[idx[0]][0]+idx[1]*o.limits[idx[0]][1],
+                    tmax = o.limits[idx[0]][0]+(idx[1]+1)*o.limits[idx[0]][1];
+                s += "<br/>" + descs[idx[0]][0] + " " + tmin + " - " + tmax +
+                    " " + descs[idx[0]][1];
+            });
+            glab.html(s);
         }
 
         function mkWOverlay(ele, eleo, data, callback, bcallback, ocallback) {
@@ -186,59 +178,57 @@ circle.site-selected {
                                     "rgb(255, 255, 255)"]),
                            d3.scale.linear()
                             .domain([0, numBins-1])
-                            .range(["#aaf", "#00f"])];
-            /*
-                hm = graph.append("svg:g"),
-                hmrows = hm.selectAll("g")
-                    .data(o.bins)
-                    .enter().append("svg:g")
-                    .property("row", function(d, i) { return i; })
-                    .attr("transform", function(d, i) {
-                            return "translate(0," + (s * i) + ")";
-                        }),
-                hmrowso = hm.selectAll("g.overlay")
-                    .data(o.bins)
-                    .enter().append("svg:g")
-                    .attr("class", "overlay")
-                    .property("row", function(d, i) { return i; })
-                    .attr("transform", function(d, i) {
-                            return "translate(0," + (s * i) + ")";
+                            .range(["#aaf", "#00f"])],
+                hm, hmrows, hmrowso;
+            switch(o.marginals.length) {
+                case 2:
+                    hm = graph.append("svg:g");
+                    hmrows = hm.selectAll("g")
+                        .data(o.bins)
+                        .enter().append("svg:g")
+                        .property("row", function(d, i) { return i; })
+                        .attr("transform", function(d, i) {
+                                return "translate(0," + (s * i) + ")";
+                            });
+                    hmrowso = hm.selectAll("g.overlay")
+                        .data(o.bins)
+                        .enter().append("svg:g")
+                        .attr("class", "overlay")
+                        .property("row", function(d, i) { return i; })
+                        .attr("transform", function(d, i) {
+                                return "translate(0," + (s * i) + ")";
+                            });
+                    mkWOverlay(hmrows, hmrowso, function(d) { return d; },
+                        function() {
+                            this.attr("transform", function(d, i) {
+                                        return "translate(" + (s * i) + ",0)";
+                                    })
+                                .attr("width", s)
+                                .attr("height", s)
+                            return this;
+                    }, function() {
+                        this.attr("fill", function(d, col) {
+                            var row = parseInt(d3.select(this.parentNode)
+                                    .property("row")),
+                                rcolour = cscales[0](row),
+                                ecolour = cscales[1](col * o.limits[1][1]),
+                                blend = d3.scale.linear()
+                                    .range([rcolour, ecolour])(.5);
+                            return colour.range(["white", blend])(d.length);
                         });
-            mkWOverlay(hmrows, hmrowso, function(d) { return d; }, function() {
-                this.attr("transform", function(d, i) {
-                            return "translate(" + (s * i) + ",0)";
-                        })
-                    .attr("width", s)
-                    .attr("height", s)
-                return this;
-            }, function() {
-                this.attr("fill", function(d, col) {
-                    var row = parseInt(d3.select(this.parentNode)
-                            .property("row")),
-                        rcolour = cscales[0](row),
-                        ecolour = cscales[1](col * o.limits[1][1]),
-                        blend = d3.scale.linear().range([rcolour, ecolour])(.5);
-                    return colour.range(["white", blend])(d.length);
-                });
-            }, function() {
-                this.on("click", function(d) {
-                        updateSelected(this, d);
-                    })
-                    .on("mouseover", function(d, col) {
-                        var row = parseInt(d3.select(d3.event.target.parentNode)
-                                .property("row")),
-                            rsmin = o.limits[0][0] + row * o.limits[0][1],
-                            rsmax = o.limits[0][0] + (row + 1) * o.limits[0][1],
-                            esmin = o.limits[1][0] + col * o.limits[1][1],
-                            esmax = o.limits[1][0] + (col + 1) * o.limits[1][1];
-                        glab.html(d.length + " sites <br/>" +
-                            descs[0][0] + " " + rsmin + " - " + rsmax + " " +
-                            descs[0][1] + "<br/>" + descs[1][0] + " " + esmin +
-                            " - " + esmax + " " + descs[1][1]);
-                    })
-                    .on("mouseout", resetLabel);
-            });
-            */
+                    }, function() {
+                        this.on("click", function(d) {
+                                updateSelected(this, d);
+                            })
+                            .on("mouseover", function(d, col) {
+                                var n = d3.event.target.parentNode,
+                                    r = parseInt(d3.select(n).property("row"));
+                                updateLabel(o, descs, d.length,
+                                        [[0, r], [1, col]]);
+                            })
+                            .on("mouseout", resetLabel);
+                    });
+            }
             // marginal distributions
             var transforms, texttransforms, maxl, ta, bs;
             switch(o.marginals.length) {
@@ -291,8 +281,17 @@ circle.site-selected {
                                 return (descs[i][1] == "m" ? cscales[i](j *
                                             o.limits[i][1]) : cscales[i](j));
                             });
-                    },
-                    setupHandlers(descs[i], o.limits[i], sites));
+                    }, function() {
+                        this.on("click", function(d) {
+                                var thissites =
+                                    $.map(d, function(e) { return e; });
+                                updateSelected(this, thissites);
+                            })
+                            .on("mouseover", function(d, j) {
+                                updateLabel(o, descs, d.length, [[i, j]]);
+                            })
+                            .on("mouseout", resetLabel);
+                });
                 // labels
                 var dc = sscale(d3.max([m[numBins/2-1].length,
                             m[numBins/2].length, m[numBins/2+1].length])) + 10;
