@@ -233,21 +233,19 @@ circle.site-selected {
                             .domain([0, o.maxs[i]])
                             .range([0, 100]),
                     me = graph.append("svg:g")
-                            .attr("transform", "translate(" + 
-                                (i == 0 ? -35 : 0) + "," +
-                                (i == 0 ? 0 : -20) + ")");
+                            .attr("transform", function() {
+                                return (i == 0 ? "translate(-35,0)" :
+                                    "rotate(90)translate(-25,0)scale(1,-1)");
+                            });
                 mkWOverlay(me, me, m, function() {
                         this.attr("transform", function(d, j) {
-                                return "translate(" +
-                                    (i == 1 ? s*j : -sscale(d.length)) + "," +
-                                    (i == 1 ? -sscale(d.length) : s*j) + ")";
+                                return "translate(" + -sscale(d.length) + "," +
+                                    s*j + ")";
                             })
                             .attr("width", function(d) {
-                                return (i == 0 ? sscale(d.length) : s);
+                                return sscale(d.length);
                             })
-                            .attr("height", function(d) {
-                                return (i == 1 ? sscale(d.length) : s);
-                            });
+                            .attr("height", s);
                         return this;
                     }, function() {
                         this.attr("fill", function(d, j) {
@@ -257,27 +255,23 @@ circle.site-selected {
                     },
                     setupHandlers(descs[i], o.limits[i], sites));
                 // labels
-                var ds = $.map(o.marginals, function(d) {
-                        return sscale(d3.max([d[numBins/2-1].length,
-                            d[numBins/2].length, d[numBins/2+1].length])) + 10;
-                    });
-                graph.append("svg:text")
+                var dc = sscale(d3.max([m[numBins/2-1].length,
+                            m[numBins/2].length, m[numBins/2+1].length])) + 10;
+                me.append("svg:text")
                     .attr("transform", function() {
-                            return "translate(" +
-                                (i == 0 ? -ds[0]-35 : s*numBins/2) + "," +
-                                (i == 0 ? s*numBins/2 : -ds[1]-20) + ")";
+                            return "translate(" + -dc + "," + s*numBins/2 +
+                                ")" + (i == 0 ? "" : "scale(1,-1)rotate(-90)");
                         })
                     .attr("text-anchor", function() {
                             return (i == 0 ? "end" : "middle");
                         })
                     .classed("axislabel", true)
-                    .text(descs[i][0] + " " + descs[i][1]);
+                    .text(descs[i][0] + " [" + descs[i][1] + "]");
                 for(var j = 0; j <= numBins; j++) {
-                    graph.append("svg:text")
+                    me.append("svg:text")
                         .attr("transform", function() {
-                                return "translate(" +
-                                    (i == 0 ? -18 : s*j) + "," +
-                                    (i == 0 ? s*j : -5) + ")";
+                                return "translate(" + 18 + "," + s*j + ")" +
+                                    (i == 0 ? "" : "scale(1,-1)rotate(-90)");
                             })
                         .attr("text-anchor", "middle")
                         .attr("baseline-shift", function() {
