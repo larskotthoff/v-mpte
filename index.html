@@ -235,14 +235,16 @@ circle.site-selected {
                     .on("mouseout", resetLabel);
             });
             // marginal distributions
+            var transforms = ["translate(-35,0)",
+                    "rotate(90)translate(-25,0)scale(1,-1)"],
+                texttransforms = ["", "scale(1,-1)rotate(-90)"];
             $.each(o.marginals, function(i, m) {
                 var sscale = d3.scale.pow().exponent(.5)
                             .domain([0, o.maxs[i]])
                             .range([0, 100]),
                     me = graph.append("svg:g")
                             .attr("transform", function() {
-                                return (i == 0 ? "translate(-35,0)" :
-                                    "rotate(90)translate(-25,0)scale(1,-1)");
+                                return transforms[i];
                             });
                 mkWOverlay(me, me, m, function() {
                         this.attr("transform", function(d, j) {
@@ -267,7 +269,7 @@ circle.site-selected {
                 me.append("svg:text")
                     .attr("transform", function() {
                             return "translate(" + -dc + "," + s*numBins/2 +
-                                ")" + (i == 0 ? "" : "scale(1,-1)rotate(-90)");
+                                ")" + texttransforms[i];
                         })
                     .attr("text-anchor", function() {
                             return (i == 0 ? "end" : "middle");
@@ -278,7 +280,7 @@ circle.site-selected {
                     me.append("svg:text")
                         .attr("transform", function() {
                                 return "translate(" + 18 + "," + s*j + ")" +
-                                    (i == 0 ? "" : "scale(1,-1)rotate(-90)");
+                                    texttransforms[i];
                             })
                         .attr("text-anchor", "middle")
                         .attr("baseline-shift", function() {
