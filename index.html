@@ -390,7 +390,9 @@ circle.site-selected {
                 .enter().append("svg:path")
                 .attr("d", path);
             d3.json("rain-ele.geojson", function(json) {
-                // draw sites
+                var descs = [["precipitation", "l/m²"], ["elevation", "m"]],
+                    rainf = function(d) { return d.properties["rain-year"]; },
+                    elef = function(d) { return d.properties["elevation"]; };
                 sites.selectAll("circle")
                     .data(json.features)
                     .enter().append("svg:circle")
@@ -409,15 +411,11 @@ circle.site-selected {
                             $(this).parent().tipsy({gravity:'sw'});
                         }
                         return d.properties.name + ": " +
-                            d.properties["rain-year"] + " l/m², " +
-                            d.properties["elevation"] + " m";
+                            rainf(d) + " " + descs[0][1] + ", " +
+                            elef(d) + " " + descs[1][1];
                     });
 
-                var o = bin(json.features,
-                            function(d) { return d.properties["rain-year"]; },
-                            function(d) { return d.properties["elevation"]; }),
-                    descs = [["precipitation", "l/m²"], ["elevation", "m"]];
-                mkGraph(descs, o);
+                mkGraph(descs, bin(json.features, rainf, elef));
             });
         });
     })();
