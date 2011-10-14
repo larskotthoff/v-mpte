@@ -92,7 +92,29 @@ circle.site-selected {
     <body>
         <script type="text/javascript">
     (function() {
-        function updateSelected(ele, d, label) {
+        var proj = d3.geo.mercator().scale(1).translate([0,0]),
+            path = d3.geo.path().projection(proj).pointRadius(1),
+            margin = 25, s = 30,
+            width = window.innerWidth - margin,
+            height = window.innerHeight - margin,
+            numBins = 10, sSites = new Array(),
+            svg = d3.select("body")
+                .append("svg:svg")
+                .attr("height", height)
+                .attr("width", width),
+            map = svg.append("svg:g"),
+            sites = map.append("svg:g"),
+            graph = svg.append("svg:g")
+                .attr("transform", "translate(" +
+                    (window.innerWidth - (4 * margin) - (numBins * s)) +
+                    ", " + (2 * margin + 120) + ")"),
+            glab = svg.append("svg:foreignObject")
+                    .attr("width", 300)
+                    .attr("height", 40)
+                    .attr("transform", "translate(100,100)")
+                    .append("div");
+
+        function updateSelected(ele, d) {
             if(d.length > 0) {
                 var idx = sSites.indexOf(d[0]);
                 if(idx > -1) {
@@ -102,7 +124,7 @@ circle.site-selected {
                     d3.select(ele).classed("selected", true);
                     sSites = sSites.concat(d);
                 }
-                label.html(sSites.length > 0 ?
+                glab.html(sSites.length > 0 ?
                     sSites.length + " sites selected" :
                     "");
                 var sel = sites.selectAll("circle").data(sSites,
@@ -113,25 +135,25 @@ circle.site-selected {
                 sel.exit().classed("site-selected", false);
             }
         }
-        function resetLabel(label) {
-            label.html(sSites.length > 0 ?
+        function resetLabel() {
+            glab.html(sSites.length > 0 ?
                 sSites.length + " sites selected" : "");
         }
 
-        function setupHandlers(desc, limits, lab, sites, sSites) {
+        function setupHandlers(desc, limits, sites) {
             return function() {
                 this.on("click", function(d) {
                         var thissites = $.map(d, function(e) { return e; });
-                        updateSelected(this, thissites, lab);
+                        updateSelected(this, thissites);
                     })
                     .on("mouseover", function(d, i) {
                         var smin = limits[0] + i * limits[1],
                             smax = limits[0] + (i + 1) * limits[1];
-                        lab.html(d.length + " sites <br/>" +
+                        glab.html(d.length + " sites <br/>" +
                             desc[0] + " " + smin + " - " + smax + " " +
                             desc[1]);
                     })
-                    .on("mouseout", resetLabel(lab));
+                    .on("mouseout", resetLabel);
             }
         }
 
@@ -149,7 +171,7 @@ circle.site-selected {
                 .call(ocallback);
         }
 
-        function mkGraph(graph, descs, label, o, s) {
+        function mkGraph(descs, o) {
             var colour = d3.scale.pow().exponent(.3)
                         .domain([0, o.nmax])
                         .range(["rgb(255,255,255)", "rgb(0,0,0)"]),
@@ -179,7 +201,7 @@ circle.site-selected {
                 this.attr("fill", function(d) { return colour(d.length); });
             }, function() {
                 this.on("click", function(d) {
-                        updateSelected(this, d, label);
+                        updateSelected(this, d);
                     })
                     .on("mouseover", function(d, col) {
                         var row = parseInt(d3.select(d3.event.target.parentNode)
@@ -188,12 +210,12 @@ circle.site-selected {
                             rsmax = o.limits[0][0] + (row + 1) * o.limits[0][1],
                             esmin = o.limits[1][0] + col * o.limits[1][1],
                             esmax = o.limits[1][0] + (col + 1) * o.limits[1][1];
-                        label.html(d.length + " sites <br/>" +
+                        glab.html(d.length + " sites <br/>" +
                             descs[0][0] + " " + rsmin + " - " + rsmax + " " +
                             descs[0][1] + "<br/>" + descs[1][0] + " " + esmin +
                             " - " + esmax + " " + descs[1][1]);
                     })
-                    .on("mouseout", resetLabel(label));
+                    .on("mouseout", resetLabel);
             });
             // marginal distributions
             var cscales = [d3.scale.linear()
@@ -233,7 +255,7 @@ circle.site-selected {
                                     o.limits[i][1]));
                             });
                     },
-                    setupHandlers(descs[i], o.limits[i], label, sites, sSites));
+                    setupHandlers(descs[i], o.limits[i], sites));
                 // labels
                 hm.append("svg:text")
                     .attr("transform", "translate(-50," + (s*numBins/2) + ")")
@@ -281,11 +303,11 @@ circle.site-selected {
             return m;
         }
 
-        function mkMatrixRe(s, i) {
+        function mkMatrixRe(l, i) {
             if(i > 0) {
-                var m = new Array(s);
-                for(var j = 0; j < s; j++) {
-                    m[j] = mkMatrixRe(s, i-1);
+                var m = new Array(l);
+                for(var j = 0; j < l; j++) {
+                    m[j] = mkMatrixRe(l, i-1);
                 }
                 return m;
             } else {
@@ -314,10 +336,10 @@ circle.site-selected {
             }
         }
 
-        function bin(numBins, raw) {
-            if(arguments.length < 3) { return null; }
+        function bin(raw) {
+            if(arguments.length < 2) { return null; }
             var args = [], limits = [], o = new Object();
-            for(var i = 2; i < arguments.length; i++) {
+            for(var i = 1; i < arguments.length; i++) {
                 args.push(arguments[i]);
             }
             $.each(args, function(i, f) {
@@ -353,33 +375,20 @@ circle.site-selected {
             return o;
         }
 
-        var proj = d3.geo.mercator().scale(1).translate([0,0]),
-            path = d3.geo.path().projection(proj).pointRadius(1),
-            margin = 25, s = 30,
-            width = window.innerWidth - margin,
-            height = window.innerHeight - margin,
-            numBins = 10, sSites = new Array(),
-            svg = d3.select("body")
-                .append("svg:svg")
-                .attr("height", height)
-                .attr("width", width),
-            map = svg.append("svg:g"),
-            sites = map.append("svg:g");
-        
-            d3.json("mesoamerica.geojson", function(json) {
-                var bounds0 = d3.geo.bounds(json),
-                    bounds = bounds0.map(proj),
-                    xscale = width/Math.abs(bounds[1][0] - bounds[0][0]),
-                    yscale = height/Math.abs(bounds[1][1] - bounds[0][1]),
-                    scale = Math.min(xscale, yscale);
+        d3.json("mesoamerica.geojson", function(json) {
+            var bounds0 = d3.geo.bounds(json),
+                bounds = bounds0.map(proj),
+                xscale = width/Math.abs(bounds[1][0] - bounds[0][0]),
+                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]),
+                scale = Math.min(xscale, yscale);
 
-                proj.scale(scale);
-                proj.translate(proj([-bounds0[0][0], -bounds0[1][1]]));
+            proj.scale(scale);
+            proj.translate(proj([-bounds0[0][0], -bounds0[1][1]]));
 
-                map.append("svg:g").selectAll("path")
-                    .data(json.features)
-                    .enter().append("svg:path")
-                    .attr("d", path);
+            map.append("svg:g").selectAll("path")
+                .data(json.features)
+                .enter().append("svg:path")
+                .attr("d", path);
             d3.json("rain-ele.geojson", function(json) {
                 // draw sites
                 sites.selectAll("circle")
@@ -404,20 +413,11 @@ circle.site-selected {
                             d.properties["elevation"] + " m";
                     });
 
-                var o = bin(numBins, json.features,
+                var o = bin(json.features,
                             function(d) { return d.properties["rain-year"]; },
                             function(d) { return d.properties["elevation"]; }),
-                    graph = svg.append("svg:g")
-                        .attr("transform", "translate(" +
-                            (window.innerWidth - (4 * margin) - (numBins * s)) +
-                            ", " + (2 * margin + 120) + ")"),
-                    glab = svg.append("svg:foreignObject")
-                            .attr("width", 300)
-                            .attr("height", 40)
-                            .attr("transform", "translate(100,100)")
-                            .append("div"),
                     descs = [["precipitation", "l/m²"], ["elevation", "m"]];
-                mkGraph(graph, descs, glab, o, s);
+                mkGraph(descs, o);
             });
         });
     })();
