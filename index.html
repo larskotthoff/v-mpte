@@ -183,7 +183,11 @@ circle.site-selected {
                                     "rgb(125, 125, 35)",
                                     "rgb(100, 25, 25)",
                                     "rgb(200, 200, 200)",
-                                    "rgb(255, 255, 255)"])],
+                                    "rgb(255, 255, 255)"]),
+                           d3.scale.linear()
+                            .domain([0, numBins-1])
+                            .range(["#aaf", "#00f"])];
+            /*
                 hm = graph.append("svg:g"),
                 hmrows = hm.selectAll("g")
                     .data(o.bins)
@@ -234,14 +238,40 @@ circle.site-selected {
                     })
                     .on("mouseout", resetLabel);
             });
+            */
             // marginal distributions
-            var transforms = ["translate(-35,0)",
-                    "rotate(90)translate(-25,0)scale(1,-1)"],
-                texttransforms = ["", "scale(1,-1)rotate(-90)"];
+            var transforms, texttransforms, maxl, ta, bs;
+            switch(o.marginals.length) {
+                case 1: transforms = ["rotate(90)translate(200,0)scale(1,-1)"];
+                        texttransforms = ["scale(1,-1)rotate(-90)"];
+                        maxl = 300;
+                        ta = ["middle"];
+                        bs = ["0%"];
+                        break;
+                case 2: transforms = ["translate(-35,0)",
+                            "rotate(90)translate(-25,0)scale(1,-1)"];
+                        texttransforms = ["", "scale(1,-1)rotate(-90)"];
+                        maxl = 100;
+                        ta = ["end", "middle"];
+                        bs = ["-50%", "0%"];
+                        break;
+                case 3: transforms = ["rotate(30 0 " + s*numBins +
+                                ")translate(-35,0)",
+                            "translate(" + s*numBins + ",0)rotate(-30 0 " +
+                                s*numBins + ")translate(35,0)scale(-1,1)",
+                            "rotate(-90)translate(" + (-s*numBins-35) + ",0)"];
+                        texttransforms = ["rotate(-30)",
+                            "scale(-1,1)rotate(30)", "rotate(90)"];
+                        maxl = 100;
+                        ta = ["end", "start", "middle"];
+                        bs = ["-50%", "0%", "-50%"];
+                        break;
+                default: break;
+            }
             $.each(o.marginals, function(i, m) {
                 var sscale = d3.scale.pow().exponent(.5)
                             .domain([0, o.maxs[i]])
-                            .range([0, 100]),
+                            .range([0, maxl]),
                     me = graph.append("svg:g")
                             .attr("transform", function() {
                                 return transforms[i];
@@ -258,8 +288,8 @@ circle.site-selected {
                         return this;
                     }, function() {
                         this.attr("fill", function(d, j) {
-                                return (i == 0 ? cscales[i](j) : cscales[i](j *
-                                    o.limits[i][1]));
+                                return (descs[i][1] == "m" ? cscales[i](j *
+                                            o.limits[i][1]) : cscales[i](j));
                             });
                     },
                     setupHandlers(descs[i], o.limits[i], sites));
@@ -271,9 +301,7 @@ circle.site-selected {
                             return "translate(" + -dc + "," + s*numBins/2 +
                                 ")" + texttransforms[i];
                         })
-                    .attr("text-anchor", function() {
-                            return (i == 0 ? "end" : "middle");
-                        })
+                    .attr("text-anchor", function() { return ta[i]; })
                     .classed("axislabel", true)
                     .text(descs[i][0] + " [" + descs[i][1] + "]");
                 for(var j = 0; j <= numBins; j++) {
@@ -283,9 +311,7 @@ circle.site-selected {
                                     texttransforms[i];
                             })
                         .attr("text-anchor", "middle")
-                        .attr("baseline-shift", function() {
-                                return (i == 0 ? "-50%" : "0%");
-                            })
+                        .attr("baseline-shift", function() { return bs[i]; })
                         .text(o.limits[i][0] + o.limits[i][1] * j);
                 }
             });
@@ -398,7 +424,8 @@ circle.site-selected {
                 .enter().append("svg:path")
                 .attr("d", path);
             d3.json("rain-ele.geojson", function(json) {
-                var descs = [["precipitation", "l/m²"], ["elevation", "m"]],
+                var descs = [["precipitation", "l/m²"], ["elevation", "m"],
+                             ["rain", "mm/m²"]],
                     rainf = function(d) { return d.properties["rain-year"]; },
                     elef = function(d) { return d.properties["elevation"]; };
                 sites.selectAll("circle")
