@@ -104,7 +104,7 @@ circle.site-selected {
             sites = map.append("svg:g"),
             graph = svg.append("svg:g")
                 .attr("transform", "translate(" +
-                    (window.innerWidth - (4 * margin) - (numBins * s)) +
+                    (window.innerWidth - (2 * margin) - (numBins * s)) +
                     ", " + (2 * margin + 120) + ")"),
             glab = svg.append("svg:foreignObject")
                     .attr("width", 300)
@@ -120,6 +120,10 @@ circle.site-selected {
                 proj.scale(mscale * d3.event.scale);
                 shapes.selectAll("path").attr("d", path);
                 sites.selectAll("circle")
+                    .attr("r", function(d) {
+                            return Math.max(1, d3.event.scale/2) *
+                                Math.max(1, 4 - d.properties.rank);
+                        })
                     .attr("cx", function(d) {
                             return proj(d.geometry.coordinates)[0];
                         })
