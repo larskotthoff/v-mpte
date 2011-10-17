@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Precipitation at Maya sites</title>
+        <title>Precipitation and average temperatures at Maya sites</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-        <script type="text/javascript" src="http://mbostock.github.com/d3/d3.min.js"></script>
-        <script type="text/javascript" src="http://mbostock.github.com/d3/d3.geo.min.js"></script>
-        <script type="text/javascript" src="http://mbostock.github.com/d3/d3.layout.min.js"></script>
-        <script type="text/javascript" src="http://code.jquery.com/jquery-1.6.2.min.js"></script>
-        <script type="text/javascript" src="https://raw.github.com/bigmlcom/tipsy/master/src/javascripts/jquery.tipsy.js"></script>
+        <script type="text/javascript" src="d3.min.js"></script>
+        <script type="text/javascript" src="d3.geo.min.js"></script>
+        <script type="text/javascript" src="d3.layout.min.js"></script>
+        <script type="text/javascript" src="jquery-1.6.2.min.js"></script>
+        <script type="text/javascript" src="jquery.tipsy.js"></script>
         <style type="text/css"> 
 .tipsy {
   padding: 5px;
@@ -143,8 +143,8 @@ circle.site-selected {
             $.each(idxs, function(i, idx) {
                 var tmin = o.limits[idx[0]][0]+idx[1]*o.limits[idx[0]][1],
                     tmax = o.limits[idx[0]][0]+(idx[1]+1)*o.limits[idx[0]][1];
-                s += "<br/>" + descs[idx[0]][0] + " " + tmin + " - " + tmax +
-                    " " + descs[idx[0]][1];
+                s += "<br/>" + descs[idx[0]].name + " " + tmin + " - " + tmax +
+                    " " + descs[idx[0]].unit;
             });
             glab.html(s);
         }
@@ -164,100 +164,60 @@ circle.site-selected {
         }
 
         function mkGraph(descs, o) {
-            var colour = d3.scale.pow().exponent(.2)
-                        .domain([0, o.nmax]),
-                cscales = [d3.scale.linear()
-                            .domain([0, numBins-1])
-                            .range(["#aaf", "#00f"]),
-                           d3.scale.linear()
-                            .domain([0, 100, 1000, 2000, 3000])
-                            .range(["rgb(30, 120, 30)",
-                                    "rgb(125, 125, 35)",
-                                    "rgb(100, 25, 25)",
-                                    "rgb(200, 200, 200)",
-                                    "rgb(255, 255, 255)"]),
-                           d3.scale.linear()
-                            .domain([0, numBins-1])
-                            .range(["#aaf", "#00f"])],
-                hm, hmrows, hmrowso;
-            switch(o.marginals.length) {
-                case 2:
-                    hm = graph.append("svg:g");
-                    hmrows = hm.selectAll("g")
-                        .data(o.bins)
-                        .enter().append("svg:g")
-                        .property("row", function(d, i) { return i; })
-                        .attr("transform", function(d, i) {
-                                return "translate(0," + (s * i) + ")";
-                            });
-                    hmrowso = hm.selectAll("g.overlay")
-                        .data(o.bins)
-                        .enter().append("svg:g")
-                        .attr("class", "overlay")
-                        .property("row", function(d, i) { return i; })
-                        .attr("transform", function(d, i) {
-                                return "translate(0," + (s * i) + ")";
-                            });
-                    mkWOverlay(hmrows, hmrowso, function(d) { return d; },
-                        function() {
-                            this.attr("transform", function(d, i) {
-                                        return "translate(" + (s * i) + ",0)";
-                                    })
-                                .attr("width", s)
-                                .attr("height", s)
-                            return this;
-                    }, function() {
-                        this.attr("fill", function(d, col) {
-                            var row = parseInt(d3.select(this.parentNode)
-                                    .property("row")),
-                                rcolour = cscales[0](row),
-                                ecolour = cscales[1](col * o.limits[1][1]),
-                                blend = d3.scale.linear()
-                                    .range([rcolour, ecolour])(.5);
-                            return colour.range(["white", blend])(d.length);
+            var colour = d3.scale.pow().exponent(.2).domain([0, o.nmax]),
+                hm = graph.append("svg:g"),
+                hmrows = hm.selectAll("g")
+                    .data(o.bins)
+                    .enter().append("svg:g")
+                    .property("row", function(d, i) { return i; })
+                    .attr("transform", function(d, i) {
+                            return "translate(0," + (s * i) + ")";
+                        }),
+                hmrowso = hm.selectAll("g.overlay")
+                    .data(o.bins)
+                    .enter().append("svg:g")
+                    .attr("class", "overlay")
+                    .property("row", function(d, i) { return i; })
+                    .attr("transform", function(d, i) {
+                            return "translate(0," + (s * i) + ")";
                         });
-                    }, function() {
-                        this.on("click", function(d) {
-                                updateSelected(this, d);
-                            })
-                            .on("mouseover", function(d, col) {
-                                var n = d3.event.target.parentNode,
-                                    r = parseInt(d3.select(n).property("row"));
-                                updateLabel(o, descs, d.length,
-                                        [[0, r], [1, col]]);
-                            })
-                            .on("mouseout", resetLabel);
+                mkWOverlay(hmrows, hmrowso, function(d) { return d; },
+                    function() {
+                        this.attr("transform", function(d, i) {
+                                    return "translate(" + (s * i) + ",0)";
+                                })
+                            .attr("width", s)
+                            .attr("height", s)
+                        return this;
+                }, function() {
+                    this.attr("fill", function(d, col) {
+                        var row = parseInt(d3.select(this.parentNode)
+                                .property("row")),
+                            rcolour = descs[0].scale(row * o.limits[0][1]),
+                            ecolour = descs[1].scale(col * o.limits[1][1]),
+                            blend = d3.rgb(d3.scale.linear()
+                                .range([rcolour, ecolour])(.5)).darker();
+                        return colour.range(["white", blend])(d.length);
                     });
-            }
+                }, function() {
+                    this.on("click", function(d) {
+                            updateSelected(this, d);
+                        })
+                        .on("mouseover", function(d, col) {
+                            var n = d3.event.target.parentNode,
+                                r = parseInt(d3.select(n).property("row"));
+                            updateLabel(o, descs, d.length,
+                                    [[0, r], [1, col]]);
+                        })
+                        .on("mouseout", resetLabel);
+                });
             // marginal distributions
-            var transforms, texttransforms, maxl, ta, bs;
-            switch(o.marginals.length) {
-                case 1: transforms = ["rotate(90)translate(200,0)scale(1,-1)"];
-                        texttransforms = ["scale(1,-1)rotate(-90)"];
-                        maxl = 300;
-                        ta = ["middle"];
-                        bs = ["0%"];
-                        break;
-                case 2: transforms = ["translate(-35,0)",
-                            "rotate(90)translate(-25,0)scale(1,-1)"];
-                        texttransforms = ["", "scale(1,-1)rotate(-90)"];
-                        maxl = 100;
-                        ta = ["end", "middle"];
-                        bs = ["-50%", "0%"];
-                        break;
-                case 3: transforms = ["rotate(30 0 " + s*numBins +
-                                ")translate(-35,0)",
-                            "translate(" + s*numBins + ",0)rotate(-30 0 " +
-                                s*numBins + ")translate(35,0)scale(-1,1)",
-                            "rotate(-90)translate(" + (-s*numBins-35) + ",0)"];
-                        texttransforms = ["rotate(-30)",
-                            "scale(-1,1)rotate(30)", "rotate(90)"];
-                        maxl = 100;
-                        ta = ["end", "start", "middle"];
-                        bs = ["-50%", "0%", "-50%"];
-                        break;
-                default: break;
-            }
+            var transforms = ["translate(-35,0)",
+                            "rotate(90)translate(-25,0)scale(1,-1)"],
+                texttransforms = ["", "scale(1,-1)rotate(-90)"],
+                maxl = 100,
+                ta = ["end", "middle"],
+                bs = ["-50%", "0%"];
             $.each(o.marginals, function(i, m) {
                 var sscale = d3.scale.pow().exponent(.5)
                             .domain([0, o.maxs[i]])
@@ -278,8 +238,7 @@ circle.site-selected {
                         return this;
                     }, function() {
                         this.attr("fill", function(d, j) {
-                                return (descs[i][1] == "m" ? cscales[i](j *
-                                            o.limits[i][1]) : cscales[i](j));
+                                return descs[i].scale(j * o.limits[i][1]);
                             });
                     }, function() {
                         this.on("click", function(d) {
@@ -302,7 +261,7 @@ circle.site-selected {
                         })
                     .attr("text-anchor", function() { return ta[i]; })
                     .classed("axislabel", true)
-                    .text(descs[i][0] + " [" + descs[i][1] + "]");
+                    .text(descs[i].name + " [" + descs[i].unit + "]");
                 for(var j = 0; j <= numBins; j++) {
                     me.append("svg:text")
                         .attr("transform", function() {
@@ -320,7 +279,7 @@ circle.site-selected {
             return a - b;
         }
         function adjLims(min, max) {
-            var tmp = Math.pow(10, ('' + max).length - 2),
+            var tmp = Math.pow(10, ('' + Math.ceil(max)).length - 2),
                 tmpmin = min - (min % tmp),
                 tmpmax = max - (max % tmp) + tmp;
             return [tmpmin, tmpmax];
@@ -422,11 +381,27 @@ circle.site-selected {
                 .data(json.features)
                 .enter().append("svg:path")
                 .attr("d", path);
-            d3.json("rain-ele.geojson", function(json) {
-                var descs = [["precipitation", "l/m²"], ["elevation", "m"],
-                             ["rain", "mm/m²"]],
-                    rainf = function(d) { return d.properties["rain-year"]; },
+            d3.json("rain-temp-ele.geojson", function(json) {
+                var descs = [],
+                    rainf = function(d) { return d.properties["rain-jan"]; },
+                    tempf = function(d) { return d.properties["temp-jan"]; };
                     elef = function(d) { return d.properties["elevation"]; };
+                descs.push({"name": "precipitation",
+                            "unit": "l/m²",
+                            "scale": d3.scale.linear().domain([0, 500]).range(["#aaf", "#00f"])});
+                descs.push({"name": "temperature",
+                            "unit": "°C",
+                            "scale": d3.scale.linear()
+                                .domain([0, 350]).range(["#00f", "#f00"])});
+                descs.push({"name": "elevation",
+                            "unit": "m",
+                            "scale": d3.scale.linear()
+                                .domain([0, 100, 1000, 2000, 3000])
+                                .range(["rgb(30, 120, 30)",
+                                        "rgb(125, 125, 35)",
+                                        "rgb(100, 25, 25)",
+                                        "rgb(200, 200, 200)",
+                                        "rgb(255, 255, 255)"])});
                 sites.selectAll("circle")
                     .data(json.features)
                     .enter().append("svg:circle")
@@ -447,11 +422,12 @@ circle.site-selected {
                             $(this).parent().tipsy({gravity:'sw'});
                         }
                         return d.properties.name + ": " +
-                            rainf(d) + " " + descs[0][1] + ", " +
-                            elef(d) + " " + descs[1][1];
+                            rainf(d) + " " + descs[0].unit + ", " +
+                            tempf(d) + " " + descs[1].unit + ", " +
+                            elef(d) + " " + descs[2].unit;
                     });
 
-                mkGraph(descs, bin(json.features, rainf, elef));
+                mkGraph(descs, bin(json.features, rainf, tempf));
             });
         });
     })();
