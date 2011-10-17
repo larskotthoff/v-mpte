@@ -92,7 +92,8 @@ circle.site-selected {
     <body>
         <script type="text/javascript">
     (function() {
-        var proj = d3.geo.mercator().scale(1).translate([0,0]),
+        var mscale = 1, t = [0,0],
+            proj = d3.geo.mercator().scale(mscale).translate(t),
             path = d3.geo.path().projection(proj).pointRadius(1),
             margin = 25, s = 30,
             width = window.innerWidth - margin,
@@ -101,7 +102,8 @@ circle.site-selected {
             svg = d3.select("body")
                 .append("svg:svg")
                 .attr("height", height)
-                .attr("width", width),
+                .attr("width", width)
+                .call(d3.behavior.zoom().on("zoom", redrawMap)),
             map = svg.append("svg:g"),
             sites = map.append("svg:g"),
             graph = svg.append("svg:g")
@@ -113,6 +115,23 @@ circle.site-selected {
                     .attr("height", 40)
                     .attr("transform", "translate(100,100)")
                     .append("div");
+
+        function redrawMap() {
+            if(d3.event.scale >= 1) {
+                var tx = t[0] * d3.event.scale + d3.event.translate[0],
+                    ty = t[1] * d3.event.scale + d3.event.translate[1];
+                proj.translate([tx, ty]);
+                proj.scale(mscale * d3.event.scale);
+                map.selectAll("path").attr("d", path);
+                sites.selectAll("circle")
+                    .attr("cx", function(d) {
+                            return proj(d.geometry.coordinates)[0];
+                        })
+                    .attr("cy", function(d) {
+                            return proj(d.geometry.coordinates)[1];
+                        });
+            }
+        }
 
         function updateSelected(ele, d) {
             if(d.length > 0) {
@@ -371,11 +390,12 @@ circle.site-selected {
             var bounds0 = d3.geo.bounds(json),
                 bounds = bounds0.map(proj),
                 xscale = width/Math.abs(bounds[1][0] - bounds[0][0]),
-                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]),
-                scale = Math.min(xscale, yscale);
+                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]);
 
-            proj.scale(scale);
-            proj.translate(proj([-bounds0[0][0], -bounds0[1][1]]));
+            mscale = Math.min(xscale, yscale);
+            proj.scale(mscale);
+            t = proj([-bounds0[0][0], -bounds0[1][1]]);
+            proj.translate(t);
 
             map.append("svg:g").selectAll("path")
                 .data(json.features)
