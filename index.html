@@ -40,7 +40,7 @@
 
 body {
   font: 10px sans;
-  fill: #222;
+  background-color: #c8ebf0;
   text-rendering: optimizeLegibility;
 }
 text {
@@ -67,11 +67,6 @@ rect.overlay:hover {
 rect.selected {
   stroke: #f00;
   stroke-width: 2;
-}
-
-path {
-  stroke: #222;
-  fill: none;
 }
 
 circle.site {
@@ -105,6 +100,7 @@ circle.site-selected {
                 .attr("width", width)
                 .call(d3.behavior.zoom().on("zoom", redrawMap)),
             map = svg.append("svg:g"),
+            shapes = map.append("svg:g"),
             sites = map.append("svg:g"),
             graph = svg.append("svg:g")
                 .attr("transform", "translate(" +
@@ -122,7 +118,7 @@ circle.site-selected {
                     ty = t[1] * d3.event.scale + d3.event.translate[1];
                 proj.translate([tx, ty]);
                 proj.scale(mscale * d3.event.scale);
-                map.selectAll("path").attr("d", path);
+                shapes.selectAll("path").attr("d", path);
                 sites.selectAll("circle")
                     .attr("cx", function(d) {
                             return proj(d.geometry.coordinates)[0];
@@ -390,17 +386,40 @@ circle.site-selected {
             var bounds0 = d3.geo.bounds(json),
                 bounds = bounds0.map(proj),
                 xscale = width/Math.abs(bounds[1][0] - bounds[0][0]),
-                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]);
+                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]),
+                escale = d3.scale.linear()
+                            .domain([0, 500, 1000, 1500, 2000, 3000])
+                            .range(["rgb(160, 190, 160)",
+                                    "rgb(130, 220, 130)",
+                                    "rgb(240, 250, 150)",
+                                    "rgb(190, 185, 135)",
+                                    "rgb(235, 175, 220)",
+                                    "rgb(240, 240, 240)"]);
 
             mscale = Math.min(xscale, yscale);
             proj.scale(mscale);
             t = proj([-bounds0[0][0], -bounds0[1][1]]);
             proj.translate(t);
 
-            map.append("svg:g").selectAll("path")
+            shapes.append("svg:g").selectAll("path")
                 .data(json.features)
                 .enter().append("svg:path")
+                .attr("fill", escale(0))
+                .attr("stroke", "#222")
                 .attr("d", path);
+            d3.json("contours.geojson", function(json) {
+                feats = json.features.sort(function(a, b) {
+                    return a.properties.e - b.properties.e;
+                });
+                shapes.append("svg:g").selectAll("path")
+                    .data(feats)
+                    .enter().append("svg:path")
+                    .attr("fill", function(d) {
+                        return escale(d.properties.e);
+                    })
+                    .attr("d", path);
+            });
+
             d3.json("rain-temp-ele.geojson", function(json) {
                 var descs = [],
                     rainf = function(d) { return d.properties["rain-jan"]; },
@@ -415,13 +434,7 @@ circle.site-selected {
                                 .domain([0, 350]).range(["#00f", "#f00"])});
                 descs.push({"name": "elevation",
                             "unit": "m",
-                            "scale": d3.scale.linear()
-                                .domain([0, 100, 1000, 2000, 3000])
-                                .range(["rgb(30, 120, 30)",
-                                        "rgb(125, 125, 35)",
-                                        "rgb(100, 25, 25)",
-                                        "rgb(200, 200, 200)",
-                                        "rgb(255, 255, 255)"])});
+                            "scale": escale});
                 sites.selectAll("circle")
                     .data(json.features)
                     .enter().append("svg:circle")
