@@ -69,6 +69,10 @@ rect.selected {
   stroke-width: 2;
 }
 
+path.control:hover {
+  stroke: #fff;
+}
+
 circle.site {
   stroke: #222;
   stroke-width: 1;
@@ -111,6 +115,50 @@ circle.site-selected {
                     .attr("height", 40)
                     .attr("transform", "translate(100,100)")
                     .append("div");
+
+        function zoomControl(e, by) {
+            var c = e.append("svg:g");
+            if(by < 0) {
+                c.attr("transform", "scale(-1)");
+            }
+            c.append("svg:path")
+                .attr("stroke", "#444")
+                .attr("stroke-width", 2)
+                .attr("fill", "#c8bef0")
+                .attr("fill-opacity", 0.8)
+                .attr("d", "M-12,0V-12A12,12 0 1,1 12,-12V0Z");
+            c.append("svg:path")
+                .attr("stroke", "#444")
+                .attr("stroke-width", 3)
+                .attr("class", "control")
+                .attr("d", "M-6,-12H6" + (by > 0 ? "M0,-18V-6" : ""))
+                .on("click", function() {
+                    var evt = document.createEvent("MouseEvents");
+                    evt.initMouseEvent(
+                      'dblclick', // in DOMString typeArg,
+                       true,  // in boolean canBubbleArg,
+                       true,  // in boolean cancelableArg,
+                       window,// in views::AbstractView viewArg,
+                       120,   // in long detailArg,
+                       width/2,     // in long screenXArg,
+                       height/2,     // in long screenYArg,
+                       width/2,     // in long clientXArg,
+                       height/2,     // in long clientYArg,
+                       0,     // in boolean ctrlKeyArg,
+                       0,     // in boolean altKeyArg,
+                       (by > 0 ? 0 : 1),     // in boolean shiftKeyArg,
+                       0,     // in boolean metaKeyArg,
+                       0,     // in unsigned short buttonArg,
+                       null   // in EventTarget relatedTargetArg
+                    );
+                    this.dispatchEvent(evt);
+                });
+            return e;
+        }
+
+        var zc = map.append("svg:g").attr("transform", "translate(15,30)");
+        zoomControl(zc, 1);
+        zoomControl(zc, -1);
 
         function redrawMap() {
             if(d3.event.scale >= 1) {
