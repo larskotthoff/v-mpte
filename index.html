@@ -255,12 +255,11 @@ button.active {
             glab.html(s);
         }
 
-        function mkWOverlay(ele, eleo, data, callback, bcallback, ocallback) {
+        function mkWOverlay(ele, eleo, data, callback, ocallback) {
             ele.selectAll("rect")
                 .data(data).enter()
                 .append("svg:rect")
-                .call(callback)
-                .call(bcallback);
+                .call(callback);
             eleo.selectAll("rect.overlay")
                 .data(data).enter()
                 .append("svg:rect")
@@ -269,8 +268,8 @@ button.active {
                 .call(ocallback);
         }
 
-        function mkGraph(descs, o) {
-            var colour = d3.scale.pow().exponent(.2).domain([0, o.nmax]),
+        function mkGraph(descs) {
+            var o = bin([], null, null),
                 hm = graph.append("svg:g"),
                 hmrows = hm.selectAll("g")
                     .data(o.bins)
@@ -297,26 +296,7 @@ button.active {
                             .attr("height", s)
                         return this;
                 }, function() {
-                    this.attr("fill", function(d, col) {
-                        var row = parseInt(d3.select(this.parentNode)
-                                .property("row")),
-                            rcolour = descs[0].scale(row * o.limits[0][1]),
-                            ecolour = descs[1].scale(col * o.limits[1][1]),
-                            blend = d3.rgb(d3.scale.linear()
-                                .range([rcolour, ecolour])(.5)).darker();
-                        return colour.range(["white", blend])(d.length);
-                    });
-                }, function() {
-                    this.on("click", function(d) {
-                            updateSelected(this, d);
-                        })
-                        .on("mouseover", function(d, col) {
-                            var n = d3.event.target.parentNode,
-                                r = parseInt(d3.select(n).property("row"));
-                            updateLabel(o, descs, d.length,
-                                    [[0, r], [1, col]]);
-                        })
-                        .on("mouseout", resetLabel);
+                    this.on("mouseout", resetLabel);
                 });
             // marginal distributions
             var transforms = ["translate(-35,0)",
@@ -325,47 +305,19 @@ button.active {
                 ta = ["end", "middle"],
                 bs = ["-50%", "0%"];
             $.each(o.marginals, function(i, m) {
-                var sscale = d3.scale.pow().exponent(.5)
-                            .domain([0, o.maxs[i]])
-                            .range([0, 100]),
-                    me = graph.append("svg:g")
+                var me = graph.append("svg:g")
                             .classed("marginal-" + i, true)
                             .attr("transform", function() {
                                 return transforms[i];
                             });
                 mkWOverlay(me, me, m, function() {
-                        this.attr("transform", function(d, j) {
-                                return "translate(" + -sscale(d.length) + "," +
-                                    s*j + ")";
-                            })
-                            .attr("width", function(d) {
-                                return sscale(d.length);
-                            })
-                            .attr("height", s);
+                        this.attr("height", s);
                         return this;
                     }, function() {
-                        this.attr("fill", function(d, j) {
-                                return descs[i].scale(j * o.limits[i][1]);
-                            });
-                    }, function() {
-                        this.on("click", function(d) {
-                                var thissites =
-                                    $.map(d, function(e) { return e; });
-                                updateSelected(this, thissites);
-                            })
-                            .on("mouseover", function(d, j) {
-                                updateLabel(o, descs, d.length, [[i, j]]);
-                            })
-                            .on("mouseout", resetLabel);
+                        this.on("mouseout", resetLabel);
                 });
                 // labels
-                var dc = sscale(d3.max([m[numBins/2-1].length,
-                            m[numBins/2].length, m[numBins/2+1].length])) + 10;
                 me.append("svg:text")
-                    .attr("transform", function() {
-                            return "translate(" + -dc + "," + s*numBins/2 +
-                                ")" + texttransforms[i];
-                        })
                     .attr("text-anchor", function() { return ta[i]; })
                     .classed("axislabel", true)
                     .text(descs[i].name + " [" + descs[i].unit + "]");
@@ -377,8 +329,7 @@ button.active {
                                     texttransforms[i];
                             })
                         .attr("text-anchor", "middle")
-                        .attr("baseline-shift", function() { return bs[i]; })
-                        .text(o.limits[i][0] + o.limits[i][1] * j);
+                        .attr("baseline-shift", function() { return bs[i]; });
                 }
             });
         }
@@ -440,6 +391,7 @@ button.active {
             var smonths = $("button.active").map(function(i, d) {
                             return $(d).attr("id");
                         }),
+                elef = function(d) { return d.properties["elevation"]; },
                 rainf = function(d) {
                         var sum = 0;
                         smonths.each(function(i, m) {
@@ -454,6 +406,15 @@ button.active {
                         });
                         return sum/smonths.length;
                     };
+
+            sites.selectAll("original-title")
+                .text(function(d) {
+                    return d.properties.name + ": " +
+                        rainf(d) + " " + descs[0].unit + ", " +
+                        tempf(d) + " " + descs[1].unit + ", " +
+                        elef(d) + " " + descs[2].unit;
+                });
+
             var o = bin(features, rainf, tempf);
 
             var colour = d3.scale.pow().exponent(.2).domain([0, o.nmax]);
@@ -618,10 +579,7 @@ button.active {
             });
 
             d3.json("rain-temp-ele.geojson", function(json) {
-                var descs = [],
-                    rainf = function(d) { return d.properties["rain-jan"]; },
-                    tempf = function(d) { return d.properties["temp-jan"]; };
-                    elef = function(d) { return d.properties["elevation"]; };
+                var descs = [];
                 descs.push({"name": "precipitation",
                             "unit": "l/m²",
                             "scale": d3.scale.linear().domain([0, 4700]).range(["#aaf", "#00f"])});
@@ -651,10 +609,7 @@ button.active {
                         } else {
                             $(this).parent().tipsy({gravity:'sw'});
                         }
-                        return d.properties.name + ": " +
-                            rainf(d) + " " + descs[0].unit + ", " +
-                            tempf(d) + " " + descs[1].unit + ", " +
-                            elef(d) + " " + descs[2].unit;
+                        return d.properties.name;
                     });
 
                 $.each([ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
@@ -673,7 +628,8 @@ button.active {
                     });
                 });
 
-                mkGraph(descs, bin(json.features, rainf, tempf));
+                mkGraph(descs);
+                updateGraph(descs, json.features);
             });
         });
     })();
