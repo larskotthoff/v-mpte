@@ -85,6 +85,23 @@ circle.site-selected {
   fill: #f00;
   shape-rendering: optimizeSpeed;
 }
+
+button {
+  background: none;
+  margin: 0;
+  border: 0;
+  min-width: 80px;
+  color: #222;
+  padding: 6px 10px 6px 10px;
+  border-radius: 5px;
+}
+
+button:hover {
+  background-color: #ccc;
+}
+button.active {
+  background-color: #aaa;
+}
         </style>
     </head>
 
@@ -92,7 +109,26 @@ circle.site-selected {
         <div id="map"></div>
         <div style="position: fixed; top: 10px; right: 10px;">
             <div id="graph"></div>
-            <div id="label" style="position: relative; left: 200px;"></div>
+            <div id="label" style="position: relative; left: 200px; height: 50px;"></div>
+            <div style="position: absolute; right: 10px;">
+                <table><tr>
+                    <td><button class="active" id="jan">January</button></td>
+                    <td><button class="inactive" id="feb">February</button></td>
+                    <td><button class="inactive" id="mar">March</button></td>
+                    </tr><tr>
+                    <td><button class="inactive" id="apr">April</button></td>
+                    <td><button class="inactive" id="may">May</button></td>
+                    <td><button class="inactive" id="jun">June</button></td>
+                    </tr><tr>
+                    <td><button class="inactive" id="jul">July</button></td>
+                    <td><button class="inactive" id="aug">August</button></td>
+                    <td><button class="inactive" id="sep">September</button></td>
+                    </tr><tr>
+                    <td><button class="inactive" id="oct">October</button></td>
+                    <td><button class="inactive" id="nov">November</button></td>
+                    <td><button class="inactive" id="dec">December</button></td>
+                </tr></table>
+            </div>
         </div>
         <script type="text/javascript">
     (function() {
@@ -234,6 +270,7 @@ circle.site-selected {
         }
 
         function mkGraph(descs, o) {
+            graph.selectAll("g").remove();
             var colour = d3.scale.pow().exponent(.2).domain([0, o.nmax]),
                 hm = graph.append("svg:g"),
                 hmrows = hm.selectAll("g")
@@ -398,6 +435,27 @@ circle.site-selected {
             }
         }
 
+        function updateGraph(descs, features) {
+            var smonths = $("button.active").map(function(i, d) {
+                            return $(d).attr("id");
+                        }),
+                rainf = function(d) {
+                        var sum = 0;
+                        smonths.each(function(i, m) {
+                            sum += d.properties["rain-" + m];
+                        });
+                        return sum;
+                    },
+                tempf = function(d) {
+                        var sum = 0;
+                        smonths.each(function(i, m) {
+                            sum += d.properties["temp-" + m];
+                        });
+                        return sum/smonths.length;
+                    };
+            mkGraph(descs, bin(features, rainf, tempf));
+        }
+
         function bin(raw) {
             if(arguments.length < 2) { return null; }
             var args = [], limits = [], o = new Object();
@@ -482,11 +540,11 @@ circle.site-selected {
                     elef = function(d) { return d.properties["elevation"]; };
                 descs.push({"name": "precipitation",
                             "unit": "l/m²",
-                            "scale": d3.scale.linear().domain([0, 500]).range(["#aaf", "#00f"])});
+                            "scale": d3.scale.linear().domain([0, 4700]).range(["#aaf", "#00f"])});
                 descs.push({"name": "temperature",
                             "unit": "°C",
                             "scale": d3.scale.linear()
-                                .domain([0, 350]).range(["#00f", "#f00"])});
+                                .domain([70, 310]).range(["#00f", "#f00"])});
                 descs.push({"name": "elevation",
                             "unit": "m",
                             "scale": escale});
@@ -515,7 +573,23 @@ circle.site-selected {
                             elef(d) + " " + descs[2].unit;
                     });
 
-                mkGraph(descs, bin(json.features, rainf, tempf));
+                $.each([ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
+                       "sep", "oct", "nov", "dec" ], function(i, m) {
+                    d3.select("#" + m).on("click", function() {
+                        var t = d3.select(this);
+                        if(t.attr("class") == "active") {
+                            if($("button.active").length > 1) {
+                                t.attr("class", "inactive");
+                                updateGraph(descs, json.features);
+                            }
+                        } else {
+                            t.attr("class", "active");
+                            updateGraph(descs, json.features);
+                        }
+                    });
+                });
+
+                updateGraph(descs, json.features);
             });
         });
     })();
