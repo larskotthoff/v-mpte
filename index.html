@@ -89,6 +89,11 @@ circle.site-selected {
     </head>
 
     <body>
+        <div id="map"></div>
+        <div style="position: fixed; top: 10px; right: 10px;">
+            <div id="graph"></div>
+            <div id="label" style="position: relative; left: 200px;"></div>
+        </div>
         <script type="text/javascript">
     (function() {
         var mscale = 1, t = [0,0],
@@ -98,7 +103,7 @@ circle.site-selected {
             width = window.innerWidth - margin,
             height = window.innerHeight - margin,
             numBins = 10, sSites = new Array(),
-            svg = d3.select("body")
+            svg = d3.select("#map")
                 .append("svg:svg")
                 .attr("height", height)
                 .attr("width", width)
@@ -106,15 +111,13 @@ circle.site-selected {
             map = svg.append("svg:g"),
             shapes = map.append("svg:g"),
             sites = map.append("svg:g"),
-            graph = svg.append("svg:g")
-                .attr("transform", "translate(" +
-                    (window.innerWidth - (2 * margin) - (numBins * s)) +
-                    ", " + (2 * margin + 120) + ")"),
-            glab = svg.append("svg:foreignObject")
-                    .attr("width", 300)
-                    .attr("height", 40)
-                    .attr("transform", "translate(100,100)")
-                    .append("div");
+            graph = d3.select("#graph")
+                .append("svg:svg")
+                .attr("height", numBins * s + 160)
+                .attr("width", numBins * s + 210)
+                .append("svg:g")
+                .attr("transform", "translate(200,150)"),
+            glab = d3.select("#label");
 
         function zoomControl(e, by) {
             var c = e.append("svg:g");
