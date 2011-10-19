@@ -220,6 +220,15 @@ button.active {
             }
         }
 
+        function updateSites() {
+            resetLabel();
+            var sel = sites.selectAll("circle").data(sSites,
+                    function(e) {
+                        return e.geometry.coordinates;
+                    });
+            sel.classed("site-selected", true);
+            sel.exit().classed("site-selected", false);
+        }
         function updateSelected(ele, d) {
             if(d.length > 0) {
                 var idx = sSites.indexOf(d[0]);
@@ -230,13 +239,7 @@ button.active {
                     d3.select(ele).classed("selected", true);
                     sSites = sSites.concat(d);
                 }
-                resetLabel();
-                var sel = sites.selectAll("circle").data(sSites,
-                        function(e) {
-                            return e.geometry.coordinates;
-                        });
-                sel.classed("site-selected", true);
-                sel.exit().classed("site-selected", false);
+                updateSites();
             }
         }
         function resetLabel() {
@@ -470,8 +473,7 @@ button.active {
                 me.selectAll("rect.overlay")
                     .data(m)
                     .on("click", function(d) {
-                        var thissites =
-                            $.map(d, function(e) { return e; });
+                        var thissites = $.map(d, function(e) { return e; });
                         updateSelected(this, thissites);
                     })
                     .on("mouseover", function(d, j) {
@@ -625,6 +627,9 @@ button.active {
                             t.attr("class", "active");
                             updateGraph(descs, json.features);
                         }
+                        graph.selectAll(".selected").classed("selected", false);
+                        sSites = [];
+                        updateSites();
                     });
                 });
 
