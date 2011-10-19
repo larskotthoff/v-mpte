@@ -109,7 +109,7 @@ button.active {
         <div id="map"></div>
         <div style="position: fixed; top: 10px; right: 10px;">
             <div id="graph"></div>
-            <div id="label" style="position: relative; left: 200px; height: 50px;"></div>
+            <div id="label" style="position: relative; left: 220px; height: 50px;"></div>
             <div style="position: absolute; right: 10px;">
                 <table><tr>
                     <td><button class="active" id="jan">January</button></td>
@@ -150,9 +150,9 @@ button.active {
             graph = d3.select("#graph")
                 .append("svg:svg")
                 .attr("height", numBins * s + 160)
-                .attr("width", numBins * s + 210)
+                .attr("width", numBins * s + 230)
                 .append("svg:g")
-                .attr("transform", "translate(200,150)"),
+                .attr("transform", "translate(220,150)"),
             glab = d3.select("#label");
 
         function zoomControl(e, by) {
@@ -270,12 +270,12 @@ button.active {
         }
 
         function mkGraph(descs, o) {
-            graph.selectAll("g").remove();
             var colour = d3.scale.pow().exponent(.2).domain([0, o.nmax]),
                 hm = graph.append("svg:g"),
                 hmrows = hm.selectAll("g")
                     .data(o.bins)
                     .enter().append("svg:g")
+                    .classed("heatmap", true)
                     .property("row", function(d, i) { return i; })
                     .attr("transform", function(d, i) {
                             return "translate(0," + (s * i) + ")";
@@ -322,14 +322,14 @@ button.active {
             var transforms = ["translate(-35,0)",
                             "rotate(90)translate(-25,0)scale(1,-1)"],
                 texttransforms = ["", "scale(1,-1)rotate(-90)"],
-                maxl = 100,
                 ta = ["end", "middle"],
                 bs = ["-50%", "0%"];
             $.each(o.marginals, function(i, m) {
                 var sscale = d3.scale.pow().exponent(.5)
                             .domain([0, o.maxs[i]])
-                            .range([0, maxl]),
+                            .range([0, 100]),
                     me = graph.append("svg:g")
+                            .classed("marginal-" + i, true)
                             .attr("transform", function() {
                                 return transforms[i];
                             });
@@ -371,6 +371,7 @@ button.active {
                     .text(descs[i].name + " [" + descs[i].unit + "]");
                 for(var j = 0; j <= numBins; j++) {
                     me.append("svg:text")
+                        .classed("tick", true)
                         .attr("transform", function() {
                                 return "translate(" + 18 + "," + s*j + ")" +
                                     texttransforms[i];
@@ -453,7 +454,90 @@ button.active {
                         });
                         return sum/smonths.length;
                     };
-            mkGraph(descs, bin(features, rainf, tempf));
+            var o = bin(features, rainf, tempf);
+
+            var colour = d3.scale.pow().exponent(.2).domain([0, o.nmax]);
+            graph.selectAll("g.heatmap")
+                .data(o.bins)
+                .selectAll("rect")
+                .data(function(d) { return d; })
+                .transition().duration(500)
+                .attr("fill", function(d, col) {
+                    var row = parseInt(d3.select(this.parentNode)
+                            .property("row")),
+                        rcolour = descs[0].scale(row * o.limits[0][1]),
+                        ecolour = descs[1].scale(col * o.limits[1][1]),
+                        blend = d3.rgb(d3.scale.linear()
+                            .range([rcolour, ecolour])(.5)).darker();
+                    return colour.range(["white", blend])(d.length);
+                });
+
+            graph.selectAll("g.overlay")
+                .data(o.bins)
+                .selectAll("rect")
+                .data(function(d) { return d; })
+                .on("click", function(d) {
+                    updateSelected(this, d);
+                })
+                .on("mouseover", function(d, col) {
+                    var n = d3.event.target.parentNode,
+                        r = parseInt(d3.select(n).property("row"));
+                    updateLabel(o, descs, d.length,
+                            [[0, r], [1, col]]);
+                });
+
+            var texttransforms = ["", "scale(1,-1)rotate(-90)"];
+            $.each(o.marginals, function(i, m) {
+                var sscale = d3.scale.pow().exponent(.5)
+                            .domain([0, o.maxs[i]])
+                            .range([0, 100]),
+                    me = graph.select("g.marginal-" + i);
+                me.selectAll("rect")
+                    .data(m)
+                    .transition().duration(500)
+                    .attr("transform", function(d, j) {
+                        return "translate(" + -sscale(d.length) + "," +
+                            s*j + ")";
+                    })
+                    .attr("width", function(d) {
+                        return sscale(d.length);
+                    })
+                    .attr("fill", function(d, j) {
+                        return descs[i].scale(j * o.limits[i][1]);
+                    });
+
+                me.selectAll("rect.overlay")
+                    .data(m)
+                    .on("click", function(d) {
+                        var thissites =
+                            $.map(d, function(e) { return e; });
+                        updateSelected(this, thissites);
+                    })
+                    .on("mouseover", function(d, j) {
+                        updateLabel(o, descs, d.length, [[i, j]]);
+                    })
+                    .transition().duration(500)
+                    .attr("transform", function(d, j) {
+                        return "translate(" + -sscale(d.length) + "," +
+                            s*j + ")";
+                    })
+                    .attr("width", function(d) {
+                        return sscale(d.length);
+                    });
+
+                var dc = sscale(d3.max([m[numBins/2-1].length,
+                            m[numBins/2].length, m[numBins/2+1].length])) + 10;
+                me.selectAll("text.axislabel")
+                    .transition().duration(500)
+                    .attr("transform", function() {
+                            return "translate(" + -dc + "," + s*numBins/2 +
+                                ")" + texttransforms[i];
+                        });
+                me.selectAll("text.tick")
+                    .text(function(d, j) {
+                        return o.limits[i][0] + o.limits[i][1] * j;
+                    });
+            });
         }
 
         function bin(raw) {
@@ -589,7 +673,7 @@ button.active {
                     });
                 });
 
-                updateGraph(descs, json.features);
+                mkGraph(descs, bin(json.features, rainf, tempf));
             });
         });
     })();
