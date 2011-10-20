@@ -139,6 +139,7 @@ button.active {
             width = window.innerWidth - margin,
             height = window.innerHeight - margin,
             numBins = 10, sSites = new Array(),
+            selectMode = -1,
             svg = d3.select("#map")
                 .append("svg:svg")
                 .attr("height", height)
@@ -220,6 +221,11 @@ button.active {
             }
         }
 
+	function resetSiteSelection() {
+            graph.selectAll(".selected").classed("selected", false);
+            sSites = [];
+            updateSites();
+	}
         function updateSites() {
             resetLabel();
             var sel = sites.selectAll("circle").data(sSites,
@@ -229,7 +235,11 @@ button.active {
             sel.classed("site-selected", true);
             sel.exit().classed("site-selected", false);
         }
-        function updateSelected(ele, d) {
+        function updateSelected(ele, i, d) {
+            if(selectMode != i) {
+                resetSiteSelection();
+                selectMode = i;
+            }
             if(d.length > 0) {
                 var idx = sSites.indexOf(d[0]);
                 if(idx > -1) {
@@ -441,7 +451,7 @@ button.active {
                 .selectAll("rect")
                 .data(function(d) { return d; })
                 .on("click", function(d) {
-                    updateSelected(this, d);
+                    updateSelected(this, -1, d);
                 })
                 .on("mouseover", function(d, col) {
                     var n = d3.event.target.parentNode,
@@ -474,7 +484,7 @@ button.active {
                     .data(m)
                     .on("click", function(d) {
                         var thissites = $.map(d, function(e) { return e; });
-                        updateSelected(this, thissites);
+                        updateSelected(this, i, thissites);
                     })
                     .on("mouseover", function(d, j) {
                         updateLabel(o, descs, d.length, [[i, j]]);
@@ -627,9 +637,7 @@ button.active {
                             t.attr("class", "active");
                             updateGraph(descs, json.features);
                         }
-                        graph.selectAll(".selected").classed("selected", false);
-                        sSites = [];
-                        updateSites();
+                        resetSiteSelection();
                     });
                 });
 
