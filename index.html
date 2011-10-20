@@ -150,10 +150,10 @@ button.active {
             sites = map.append("svg:g"),
             graph = d3.select("#graph")
                 .append("svg:svg")
-                .attr("height", numBins * s + 160)
+                .attr("height", numBins * s + 170)
                 .attr("width", numBins * s + 175)
                 .append("svg:g")
-                .attr("transform", "translate(165,150)"),
+                .attr("transform", "translate(165,160)"),
             glab = d3.select("#label");
 
         function zoomControl(e, by) {
@@ -443,7 +443,7 @@ button.active {
                         ecolour = descs[1].scale(col * o.limits[1][1]),
                         blend = d3.rgb(d3.scale.linear()
                             .range([rcolour, ecolour])(.5)).darker();
-                    return colour.range(["white", blend])(d.length);
+                    return colour.range(["#c8ebf0", blend])(d.length);
                 });
 
             graph.selectAll("g.overlay")
@@ -609,11 +609,13 @@ button.active {
                 var descs = [];
                 descs.push({"name": "precipitation",
                             "unit": "l/m²",
-                            "scale": d3.scale.linear().domain([0, 4700]).range(["#aaf", "#00f"])});
+                            "scale": d3.scale.linear()
+                                .domain([0, 4700]).range(["#aaf", "#00f"])});
                 descs.push({"name": "temperature",
                             "unit": "°C",
                             "scale": d3.scale.linear()
-                                .domain([70, 310]).range(["#00f", "#f00"])});
+                                .domain([70, 150, 310])
+                                .range(["blue", "yellow", "red"])});
                 descs.push({"name": "elevation",
                             "unit": "m",
                             "scale": escale});
