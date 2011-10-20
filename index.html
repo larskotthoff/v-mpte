@@ -136,9 +136,9 @@ button.active {
             proj = d3.geo.mercator().scale(mscale).translate(t),
             path = d3.geo.path().projection(proj).pointRadius(1),
             margin = 25, s = 30,
-            width = window.innerWidth - margin,
-            height = window.innerHeight - margin,
             numBins = 10, sSites = new Array(),
+            width = window.innerWidth - numBins * s - 175,
+            height = window.innerHeight - margin,
             selectMode = -1,
             svg = d3.select("#map")
                 .append("svg:svg")
@@ -151,9 +151,9 @@ button.active {
             graph = d3.select("#graph")
                 .append("svg:svg")
                 .attr("height", numBins * s + 160)
-                .attr("width", numBins * s + 230)
+                .attr("width", numBins * s + 175)
                 .append("svg:g")
-                .attr("transform", "translate(220,150)"),
+                .attr("transform", "translate(165,150)"),
             glab = d3.select("#label");
 
         function zoomControl(e, by) {
@@ -196,7 +196,7 @@ button.active {
             return e;
         }
 
-        var zc = map.append("svg:g").attr("transform", "translate(15,30)");
+        var zc = svg.append("svg:g").attr("transform", "translate(15,30)");
         zoomControl(zc, 1);
         zoomControl(zc, -1);
 
@@ -460,7 +460,6 @@ button.active {
                             [[0, r], [1, col]]);
                 });
 
-            var texttransforms = ["", "scale(1,-1)rotate(-90)"];
             $.each(o.marginals, function(i, m) {
                 var sscale = d3.scale.pow().exponent(.5)
                             .domain([0, o.maxs[i]])
@@ -503,8 +502,12 @@ button.active {
                 me.selectAll("text.axislabel")
                     .transition().duration(500)
                     .attr("transform", function() {
-                            return "translate(" + -dc + "," + s*numBins/2 +
-                                ")" + texttransforms[i];
+                            if(i == 0) {
+                                return "translate(10,-10)";
+                            } else {
+                                return "translate(" + -dc + "," + s*numBins/2 +
+                                    ")scale(1,-1)rotate(-90)";
+                            }
                         });
                 me.selectAll("text.tick")
                     .text(function(d, j) {
@@ -570,6 +573,18 @@ button.active {
             proj.scale(mscale);
             t = proj([-bounds0[0][0], -bounds0[1][1]]);
             proj.translate(t);
+
+            if(xscale > yscale) {
+                // center horizontally
+                var d = xscale * Math.abs(bounds[1][0] - bounds[0][0]) -
+                    yscale * Math.abs(bounds[1][0] - bounds[0][0]);
+                map.attr("transform", "translate(" + d/2 + ", 0)");
+            } else {
+                // center vertically
+                var d = yscale * Math.abs(bounds[1][1] - bounds[0][1]) -
+                    xscale * Math.abs(bounds[1][1] - bounds[0][1]);
+                map.attr("transform", "translate(0, " + d/2 + ")");
+            }
 
             shapes.append("svg:g").selectAll("path")
                 .data(json.features)
