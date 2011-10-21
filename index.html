@@ -53,8 +53,10 @@ text.axislabel {
 }
 
 rect {
-  stroke: #222;
   stroke-width: 0.5;
+}
+rect.hist {
+  stroke: #222;
 }
 rect.overlay {
   stroke: none;
@@ -306,7 +308,7 @@ button.active {
                                     return "translate(" + (s * i) + ",0)";
                                 })
                             .attr("width", s)
-                            .attr("height", s)
+                            .attr("height", s);
                         return this;
                 }, function() {
                     this.on("mouseout", resetLabel);
@@ -324,7 +326,7 @@ button.active {
                                 return transforms[i];
                             });
                 mkWOverlay(me, me, m, function() {
-                        this.attr("height", s);
+                        this.attr("class", "hist").attr("height", s);
                         return this;
                     }, function() {
                         this.on("mouseout", resetLabel);
@@ -436,6 +438,9 @@ button.active {
                 .selectAll("rect")
                 .data(function(d) { return d; })
                 .transition().duration(500)
+                .attr("stroke", function(d) {
+                    return d.length > 0 ? "#222" : "none";
+                })
                 .attr("fill", function(d, col) {
                     var row = parseInt(d3.select(this.parentNode)
                             .property("row")),
