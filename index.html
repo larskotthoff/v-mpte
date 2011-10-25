@@ -112,6 +112,7 @@ button.active {
         <div style="position: fixed; top: 10px; right: 10px;">
             <div id="graph"></div>
             <div id="label" style="position: relative; left: 220px; height: 50px;"></div>
+            <div id="elehist" style="position: absolute; left: 50px;"></div>
             <div style="position: absolute; right: 10px;">
                 <table><tr>
                     <td><button class="active" id="jan">January</button></td>
@@ -156,6 +157,19 @@ button.active {
                 .attr("width", numBins * s + 175)
                 .append("svg:g")
                 .attr("transform", "translate(165,160)"),
+            elegraph = d3.select("#elehist")
+                .append("svg:svg")
+                .attr("height", 11 * s)
+                .attr("width", 200),
+            elebins = d3.layout.histogram(),
+            escale = d3.scale.linear()
+                        .domain([0, 500, 1000, 1500, 2000, 3000])
+                        .range(["rgb(160, 190, 160)",
+                                "rgb(130, 220, 130)",
+                                "rgb(240, 250, 150)",
+                                "rgb(190, 185, 135)",
+                                "rgb(235, 175, 220)",
+                                "rgb(240, 240, 240)"]),
             glab = d3.select("#label");
 
         function zoomControl(e, by) {
@@ -202,6 +216,10 @@ button.active {
         zoomControl(zc, 1);
         zoomControl(zc, -1);
 
+        function elef(d) {
+            return d.properties["elevation"];
+        }
+
         function redrawMap() {
             if(d3.event.scale >= 1) {
                 var tx = t[0] * d3.event.scale + d3.event.translate[0],
@@ -225,6 +243,7 @@ button.active {
 
 	function resetSiteSelection() {
             graph.selectAll(".selected").classed("selected", false);
+            elegraph.selectAll(".selected").classed("selected", false);
             sSites = [];
             updateSites();
 	}
@@ -270,11 +289,12 @@ button.active {
             glab.html(s);
         }
 
-        function mkWOverlay(ele, eleo, data, callback, ocallback) {
+        function mkWOverlay(ele, eleo, data, callback, bcallback, ocallback) {
             ele.selectAll("rect")
                 .data(data).enter()
                 .append("svg:rect")
-                .call(callback);
+                .call(callback)
+                .call(bcallback);
             eleo.selectAll("rect.overlay")
                 .data(data).enter()
                 .append("svg:rect")
@@ -310,8 +330,8 @@ button.active {
                             .attr("width", s)
                             .attr("height", s);
                         return this;
-                }, function() {
-                    this.on("mouseout", resetLabel);
+                    }, function() { }, function() {
+                        this.on("mouseout", resetLabel);
                 });
             // marginal distributions
             var transforms = ["translate(-35,0)",
@@ -326,8 +346,10 @@ button.active {
                                 return transforms[i];
                             });
                 mkWOverlay(me, me, m, function() {
-                        this.attr("class", "hist").attr("height", s);
+                        this.attr("height", s);
                         return this;
+                    }, function() {
+                        this.attr("class", "hist");
                     }, function() {
                         this.on("mouseout", resetLabel);
                 });
@@ -346,6 +368,37 @@ button.active {
                         .attr("text-anchor", "middle")
                         .attr("baseline-shift", function() { return bs[i]; });
                 }
+            });
+        }
+
+        function mkEleGraph(desc, data) {
+            var eledata = elebins(data),
+                ys = $.map(eledata, function(d) { return d.y; }),
+                sscale = d3.scale.pow().exponent(.5)
+                        .domain([0, d3.max(ys)])
+                        .range([0, 100]);
+            mkWOverlay(elegraph, elegraph, eledata, function() {
+                    this.attr("height", s/2)
+                        .attr("width", function(d) { return sscale(d.y); })
+                        .attr("x", function(d) { return 50 - sscale(d.y)/2; })
+                        .attr("y", function(d, i) { return i * s/2; });
+                    return this;
+                }, function() {
+                    this.classed("hist", true)
+                        .attr("fill", function(d) {
+                            return escale(d.x);
+                        });
+                }, function() {
+                    this.on("mouseout", resetLabel)
+                        .on("click", function(d) {
+                            updateSelected(this, -2, d);
+                        })
+                        .on("mouseover", function(d) {
+                            var s = d.y + " site" + (d.y != 1 ? "s" : "");
+                            s += "<br/>" + desc.name + " " + d.x + " - " +
+                                (d.x + d.dx) + " " + desc.unit;
+                            glab.html(s);
+                        });
             });
         }
 
@@ -406,7 +459,6 @@ button.active {
             var smonths = $("button.active").map(function(i, d) {
                             return $(d).attr("id");
                         }),
-                elef = function(d) { return d.properties["elevation"]; },
                 rainf = function(d) {
                         var sum = 0;
                         smonths.each(function(i, m) {
@@ -429,7 +481,7 @@ button.active {
                         tempf(d) + " " + descs[1].unit + ", " +
                         elef(d) + " " + descs[2].unit;
                 });
-
+            
             var o = bin(features, rainf, tempf);
 
             var colour = d3.scale.pow().exponent(.2).domain([0, o.nmax]);
@@ -470,7 +522,7 @@ button.active {
                             .domain([0, o.maxs[i]])
                             .range([0, 100]),
                     me = graph.select("g.marginal-" + i);
-                me.selectAll("rect")
+                me.selectAll("rect.hist")
                     .data(m)
                     .transition().duration(500)
                     .attr("transform", function(d, j) {
@@ -564,15 +616,7 @@ button.active {
             var bounds0 = d3.geo.bounds(json),
                 bounds = bounds0.map(proj),
                 xscale = width/Math.abs(bounds[1][0] - bounds[0][0]),
-                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]),
-                escale = d3.scale.linear()
-                            .domain([0, 500, 1000, 1500, 2000, 3000])
-                            .range(["rgb(160, 190, 160)",
-                                    "rgb(130, 220, 130)",
-                                    "rgb(240, 250, 150)",
-                                    "rgb(190, 185, 135)",
-                                    "rgb(235, 175, 220)",
-                                    "rgb(240, 240, 240)"]);
+                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]);
 
             mscale = Math.min(xscale, yscale);
             proj.scale(mscale);
@@ -601,6 +645,13 @@ button.active {
                 feats = json.features.sort(function(a, b) {
                     return a.properties.e - b.properties.e;
                 });
+                var eles = [];
+                $.each(json.features, function(i, d) {
+                    if(eles.length == 0 || eles[eles.length-1] != d.properties.e) {
+                        eles.push(d.properties.e);
+                    }
+                });
+                elebins.bins(eles).value(elef);
                 shapes.append("svg:g").selectAll("path")
                     .data(feats)
                     .enter().append("svg:path")
@@ -664,6 +715,7 @@ button.active {
                 });
 
                 mkGraph(descs);
+                mkEleGraph(descs[2], json.features);
                 updateGraph(descs, json.features);
             });
         });
