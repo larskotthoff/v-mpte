@@ -162,6 +162,7 @@ button.active {
                 .attr("height", 11 * s)
                 .attr("width", 200),
             elebins = d3.layout.histogram(),
+            eledata = null,
             escale = d3.scale.linear()
                         .domain([0, 500, 1000, 1500, 2000, 3000])
                         .range(["rgb(160, 190, 160)",
@@ -271,6 +272,7 @@ button.active {
                     sSites = sSites.concat(d);
                 }
                 updateSites();
+                updateEleGraph(sSites);
             }
         }
         function resetLabel() {
@@ -331,7 +333,10 @@ button.active {
                             .attr("height", s);
                         return this;
                     }, function() { }, function() {
-                        this.on("mouseout", resetLabel);
+                        this.on("mouseout", resetLabel)
+                            .on("click", function(d) {
+                                updateSelected(this, -1, d);
+                            });
                 });
             // marginal distributions
             var transforms = ["translate(-35,0)",
@@ -351,7 +356,11 @@ button.active {
                     }, function() {
                         this.attr("class", "hist");
                     }, function() {
-                        this.on("mouseout", resetLabel);
+                        this.on("mouseout", resetLabel)
+                            .on("click", function(d) {
+                                var thissites = $.map(d, function(e) { return e; });
+                                updateSelected(this, i, thissites);
+                            });
                 });
                 // labels
                 me.append("svg:text")
@@ -372,11 +381,12 @@ button.active {
         }
 
         function mkEleGraph(desc, data) {
-            var eledata = elebins(data),
-                ys = $.map(eledata, function(d) { return d.y; }),
+            eledata = elebins(data);
+            var ys = $.map(eledata, function(d) { return d.y; }),
                 sscale = d3.scale.pow().exponent(.5)
                         .domain([0, d3.max(ys)])
-                        .range([0, 100]);
+                        .range([0, 100]),
+                tmpSSites = [];
             mkWOverlay(elegraph, elegraph, eledata, function() {
                     this.attr("height", s/2)
                         .attr("width", function(d) { return sscale(d.y); })
@@ -391,7 +401,25 @@ button.active {
                 }, function() {
                     this.on("mouseout", resetLabel)
                         .on("click", function(d) {
-                            updateSelected(this, -2, d);
+                            if(selectMode != -2) {
+                                d3.select(this).classed("selected", true);
+                                tmpSSites = sSites;
+                                sSites = d;
+                            } else {
+                                var idx = sSites.indexOf(d[0]);
+                                if(idx > -1) {
+                                    d3.select(this).classed("selected", false);
+                                    sSites.splice(idx, d.length);
+                                    if(sSites.length == 0) {
+                                        sSites = tmpSSites;
+                                    }
+                                } else {
+                                    d3.select(this).classed("selected", true);
+                                    sSites = sSites.concat(d);
+                                }
+                            }
+                            selectMode = -2;
+                            updateSites();
                         })
                         .on("mouseover", function(d) {
                             var s = d.y + " site" + (d.y != 1 ? "s" : "");
@@ -400,6 +428,22 @@ button.active {
                             glab.html(s);
                         });
             });
+        }
+
+        function updateEleGraph(data) {
+            var teledata = data.length > 0 ? elebins(data) : eledata;
+                ys = $.map(teledata, function(d) { return d.y; }),
+                sscale = d3.scale.pow().exponent(.5)
+                        .domain([0, d3.max(ys)])
+                        .range([0, 100]);
+            elegraph.selectAll("rect.hist").data(teledata)
+                .transition().duration(500)
+                .attr("width", function(d) { return sscale(d.y); })
+                .attr("x", function(d) { return 50 - sscale(d.y)/2; });
+            elegraph.selectAll("rect.overlay").data(teledata)
+                .transition().duration(500)
+                .attr("width", function(d) { return sscale(d.y); })
+                .attr("x", function(d) { return 50 - sscale(d.y)/2; });
         }
 
         function nsort(a, b) {
@@ -507,9 +551,6 @@ button.active {
                 .data(o.bins)
                 .selectAll("rect")
                 .data(function(d) { return d; })
-                .on("click", function(d) {
-                    updateSelected(this, -1, d);
-                })
                 .on("mouseover", function(d, col) {
                     var n = d3.event.target.parentNode,
                         r = parseInt(d3.select(n).property("row"));
@@ -538,10 +579,6 @@ button.active {
 
                 me.selectAll("rect.overlay")
                     .data(m)
-                    .on("click", function(d) {
-                        var thissites = $.map(d, function(e) { return e; });
-                        updateSelected(this, i, thissites);
-                    })
                     .on("mouseover", function(d, j) {
                         updateLabel(o, descs, d.length, [[i, j]]);
                     })
