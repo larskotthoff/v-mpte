@@ -159,8 +159,9 @@ button.active {
                 .attr("transform", "translate(165,160)"),
             elegraph = d3.select("#elehist")
                 .append("svg:svg")
-                .attr("height", 11 * s)
-                .attr("width", 200),
+                .attr("width", 200)
+                .append("svg:g")
+                .attr("transform", "translate(5,5)"),
             elebins = d3.layout.histogram(),
             eledata = null,
             escale = d3.scale.linear()
@@ -428,6 +429,20 @@ button.active {
                             glab.html(s);
                         });
             });
+            elegraph.append("svg:text")
+                .attr("transform", "translate(50," + (eledata.length * s/2 + 5) + ")")
+                .attr("text-anchor", "middle")
+                .classed("axislabel", true)
+                .text(desc.name + " [" + desc.unit + "]");
+            elegraph.selectAll("text.tick").data(eledata).enter()
+                .append("svg:text")
+                .classed("tick", true)
+                .attr("transform", function(d, j) {
+                        return "translate(105," + j*s/2 + ")";
+                    })
+                .attr("text-anchor", "start")
+                .attr("baseline-shift", "-50%")
+                .text(function(d) { return d.x; });
         }
 
         function updateEleGraph(data) {
