@@ -74,6 +74,10 @@ rect.selected {
 path.control:hover {
   stroke: #fff;
 }
+path.selected {
+  stroke: #f00;
+  stroke-width: 2;
+}
 
 circle.site {
   stroke: #222;
@@ -387,7 +391,7 @@ button.active {
                 sscale = d3.scale.pow().exponent(.5)
                         .domain([0, d3.max(ys)])
                         .range([0, 100]),
-                tmpSSites = [];
+                tmpSSites = [], tmpSelectMode = 0;
             mkWOverlay(elegraph, elegraph, eledata, function() {
                     this.attr("height", s/2)
                         .attr("width", function(d) { return sscale(d.y); })
@@ -405,7 +409,9 @@ button.active {
                             if(selectMode != -2) {
                                 d3.select(this).classed("selected", true);
                                 tmpSSites = sSites;
+                                tmpSelectMode = selectMode;
                                 sSites = d;
+                                selectMode = -2;
                             } else {
                                 var idx = sSites.indexOf(d[0]);
                                 if(idx > -1) {
@@ -413,20 +419,29 @@ button.active {
                                     sSites.splice(idx, d.length);
                                     if(sSites.length == 0) {
                                         sSites = tmpSSites;
+                                        selectMode = tmpSelectMode;
                                     }
                                 } else {
                                     d3.select(this).classed("selected", true);
                                     sSites = sSites.concat(d);
                                 }
                             }
-                            selectMode = -2;
                             updateSites();
+                        })
+                        .on("mouseout", function(d) {
+                            shapes.selectAll("path.contour")
+                                .classed("selected", false);
                         })
                         .on("mouseover", function(d) {
                             var s = d.y + " site" + (d.y != 1 ? "s" : "");
                             s += "<br/>" + desc.name + " " + d.x + " - " +
                                 (d.x + d.dx) + " " + desc.unit;
                             glab.html(s);
+
+                            shapes.selectAll("path.contour")
+                                .classed("selected", function(e) {
+                                    return e.properties.e == d.x;
+                                });
                         });
             });
             elegraph.append("svg:text")
@@ -707,6 +722,7 @@ button.active {
                 shapes.append("svg:g").selectAll("path")
                     .data(feats)
                     .enter().append("svg:path")
+                    .classed("contour", true)
                     .attr("fill", function(d) {
                         return escale(d.properties.e);
                     })
