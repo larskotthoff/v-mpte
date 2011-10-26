@@ -75,7 +75,7 @@ path.control:hover {
   stroke: #fff;
 }
 path.selected {
-  fill: #f00;
+  fill: #a00;
 }
 
 circle.site {
@@ -142,7 +142,7 @@ button.active {
             proj = d3.geo.mercator().scale(mscale).translate(t),
             path = d3.geo.path().projection(proj).pointRadius(1),
             margin = 25, s = 30,
-            numBins = 10, sSites = new Array(),
+            numBins = 10, sSites = new Array(), preEleSSites = [],
             width = window.innerWidth - numBins * s - 175,
             height = window.innerHeight - margin,
             selectMode = -1,
@@ -246,12 +246,11 @@ button.active {
             }
         }
 
-	function resetSiteSelection() {
+        function resetSiteSelection() {
             graph.selectAll(".selected").classed("selected", false);
-            elegraph.selectAll(".selected").classed("selected", false);
             sSites = [];
             updateSites();
-	}
+        }
         function updateSites() {
             resetLabel();
             var sel = sites.selectAll("circle").data(sSites,
@@ -262,6 +261,8 @@ button.active {
             sel.exit().classed("site-selected", false);
         }
         function updateSelected(ele, i, d) {
+            elegraph.selectAll(".selected").classed("selected", false);
+            sSites = preEleSSites;
             if(selectMode != i) {
                 resetSiteSelection();
                 selectMode = i;
@@ -275,8 +276,9 @@ button.active {
                     d3.select(ele).classed("selected", true);
                     sSites = sSites.concat(d);
                 }
+                preEleSSites = sSites;
                 updateSites();
-                updateEleGraph(sSites);
+                updateEleGraph();
             }
         }
         function resetLabel() {
@@ -389,8 +391,7 @@ button.active {
             var ys = $.map(eledata, function(d) { return d.y; }),
                 sscale = d3.scale.pow().exponent(.5)
                         .domain([0, d3.max(ys)])
-                        .range([0, 100]),
-                tmpSSites = [], tmpSelectMode = 0;
+                        .range([0, 100]);
             mkWOverlay(elegraph, elegraph, eledata, function() {
                     this.attr("height", s/2)
                         .attr("width", function(d) { return sscale(d.y); })
@@ -403,31 +404,26 @@ button.active {
                             return escale(d.x);
                         });
                 }, function() {
-                    this.on("mouseout", resetLabel)
-                        .on("click", function(d) {
-                            if(selectMode != -2) {
-                                d3.select(this).classed("selected", true);
-                                tmpSSites = sSites;
-                                tmpSelectMode = selectMode;
-                                sSites = d;
-                                selectMode = -2;
-                            } else {
+                    this.on("click", function(d) {
+                            if(d3.select(this).classed("selected")) {
+                                d3.select(this).classed("selected", false);
                                 var idx = sSites.indexOf(d[0]);
-                                if(idx > -1) {
-                                    d3.select(this).classed("selected", false);
-                                    sSites.splice(idx, d.length);
-                                    if(sSites.length == 0) {
-                                        sSites = tmpSSites;
-                                        selectMode = tmpSelectMode;
-                                    }
+                                sSites.splice(idx, d.length);
+                                if(sSites.length == 0) {
+                                    sSites = preEleSSites;
+                                }
+                            } else {
+                                if(elegraph.selectAll(".selected").empty() && sSites.length) {
+                                    sSites = d.slice();
                                 } else {
-                                    d3.select(this).classed("selected", true);
                                     sSites = sSites.concat(d);
                                 }
+                                d3.select(this).classed("selected", true);
                             }
                             updateSites();
                         })
                         .on("mouseout", function(d) {
+                            resetLabel();
                             shapes.selectAll("path.contour")
                                 .classed("selected", false);
                         })
@@ -459,8 +455,8 @@ button.active {
                 .text(function(d) { return d.x; });
         }
 
-        function updateEleGraph(data) {
-            var teledata = data.length > 0 ? elebins(data) : eledata;
+        function updateEleGraph() {
+            var teledata = sSites.length > 0 ? elebins(sSites) : eledata;
                 ys = $.map(teledata, function(d) { return d.y; }),
                 sscale = d3.scale.pow().exponent(.5)
                         .domain([0, d3.max(ys)])
