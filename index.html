@@ -166,7 +166,7 @@ button.active {
                 .append("svg:svg")
                 .attr("height", 150)
                 .append("svg:g")
-                .attr("transform", "translate(10,0)"),
+                .attr("transform", "translate(10,5)"),
             elebins = d3.layout.histogram(),
             eledata = null,
             escale = d3.scale.linear()
@@ -175,7 +175,7 @@ button.active {
                                 "rgb(130, 220, 130)",
                                 "rgb(240, 250, 150)",
                                 "rgb(190, 185, 135)",
-                                "rgb(235, 175, 220)",
+                                "rgb(160, 155, 105)",
                                 "rgb(240, 240, 240)"]),
             glab = d3.select("#label");
 
@@ -366,7 +366,8 @@ button.active {
                         this.attr("height", s);
                         return this;
                     }, function() {
-                        this.attr("class", "hist");
+                        this.attr("class", "hist")
+                            .attr("fill-opacity", 0.6);
                     }, function() {
                         this.on("mouseout", resetLabel)
                             .on("click", function(d) {
@@ -572,7 +573,7 @@ button.active {
                         rcolour = descs[0].scale(row * o.limits[0][1]),
                         ecolour = descs[1].scale(col * o.limits[1][1]),
                         blend = d3.rgb(d3.scale.linear()
-                            .range([rcolour, ecolour])(.5)).darker();
+                            .range([rcolour, ecolour])(.5));
                     return colour.range(["#c8ebf0", blend])(d.length);
                 });
 
@@ -732,12 +733,18 @@ button.active {
                 descs.push({"name": "precipitation",
                             "unit": "l/m²",
                             "scale": d3.scale.linear()
-                                .domain([0, 4700]).range(["#aaf", "#00f"])});
+                                .domain([0, 250, 375, 500, 625, 750, 1000, 1500,
+                                    2000, 2500, 3500, 4500])
+                                .range(["#f00", "#ff8400", "#ffca00", "#ff9",
+                                    "#ff0", "#0f0", "#008400", "#3ff", "#00f",
+                                    "#c0c", "#609", "#006"])});
                 descs.push({"name": "temperature",
                             "unit": "°C",
                             "scale": d3.scale.linear()
-                                .domain([7, 15, 31])
-                                .range(["blue", "yellow", "red"])});
+                                .domain([0, 5, 10, 15, 20, 25, 30])
+                                .range(["#2effde", "#b1ff5e", "#fff700",
+                                    "#fe7802", "#fd0e00", "#990100",
+                                    "#1e1e20"])});
                 descs.push({"name": "elevation",
                             "unit": "m",
                             "scale": escale});
