@@ -112,10 +112,10 @@ button.active {
 
     <body>
         <div style="top: 10px; left: 10px; width: 100px;">
-            <div style="font-size: larger;">
-                Welcome! Move the mouse over the histograms / heatmap to see how
-                many sites fall into that region. Click to select.
-                Click to select months to show.
+            <div style="padding-bottom: 20px; font-size: larger;">
+                Welcome! Hover over the histograms / heatmap / sites
+                to see more information. Click to select regions of the graphs
+                and months to show.
             </div>
             <div>
                 <button class="active" id="jan">January</button>
@@ -291,8 +291,12 @@ button.active {
         function updateLabel(o, descs, num, idxs) {
             var s = num + " site" + (num != 1 ? "s" : "");
             $.each(idxs, function(i, idx) {
-                var tmin = o.limits[idx[0]][0]+idx[1]*o.limits[idx[0]][1],
-                    tmax = o.limits[idx[0]][0]+(idx[1]+1)*o.limits[idx[0]][1];
+                var minnum = o.limits[idx[0]][0]+idx[1]*o.limits[idx[0]][1],
+                    tmin = minnum == Math.floor(minnum) ?
+                        minnum : minnum.toFixed(1),
+                    maxnum = o.limits[idx[0]][0]+(idx[1]+1)*o.limits[idx[0]][1],
+                    tmax = maxnum == Math.floor(maxnum) ?
+                        maxnum : maxnum.toFixed(1);
                 s += "<br/>" + descs[idx[0]].name + " " + tmin + " - " + tmax +
                     " " + descs[idx[0]].unit;
             });
@@ -540,7 +544,7 @@ button.active {
                         smonths.each(function(i, m) {
                             sum += d.properties["temp-" + m];
                         });
-                        return sum/smonths.length;
+                        return (sum/smonths.length/10).toFixed(1);
                     };
 
             sites.selectAll("original-title")
@@ -630,7 +634,8 @@ button.active {
                         });
                 me.selectAll("text.tick")
                     .text(function(d, j) {
-                        return o.limits[i][0] + o.limits[i][1] * j;
+                        var num = o.limits[i][0] + o.limits[i][1] * j;
+                        return num == Math.floor(num) ? num : num.toFixed(1);
                     });
             });
         }
@@ -733,7 +738,7 @@ button.active {
                 descs.push({"name": "temperature",
                             "unit": "°C",
                             "scale": d3.scale.linear()
-                                .domain([70, 150, 310])
+                                .domain([7, 15, 31])
                                 .range(["blue", "yellow", "red"])});
                 descs.push({"name": "elevation",
                             "unit": "m",
