@@ -373,16 +373,15 @@ button.active {
                     .attr("text-anchor", function() { return ta[i]; })
                     .classed("axislabel", true)
                     .text(descs[i].name + " [" + descs[i].unit + "]");
-                for(var j = 0; j <= numBins; j++) {
-                    me.append("svg:text")
-                        .classed("tick", true)
-                        .attr("transform", function() {
-                                return "translate(" + 18 + "," + s*j + ")" +
-                                    texttransforms[i];
-                            })
-                        .attr("text-anchor", "middle")
-                        .attr("baseline-shift", function() { return bs[i]; });
-                }
+                me.selectAll("text.tick").data(m + o.limits[i][2]).enter()
+                    .append("svg:text")
+                    .classed("tick", true)
+                    .attr("transform", function(d, j) {
+                            return "translate(" + 18 + "," + s*j + ")" +
+                                texttransforms[i];
+                        })
+                    .attr("text-anchor", "middle")
+                    .attr("baseline-shift", function() { return bs[i]; });
             });
         }
 
