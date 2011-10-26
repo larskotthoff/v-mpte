@@ -166,7 +166,7 @@ button.active {
                 .append("svg:svg")
                 .attr("height", 150)
                 .append("svg:g")
-                .attr("transform", "translate(5,5)"),
+                .attr("transform", "translate(10,0)"),
             elebins = d3.layout.histogram(),
             eledata = null,
             escale = d3.scale.linear()
@@ -679,11 +679,15 @@ button.active {
             return o;
         }
 
-        d3.json("mesoamerica.geojson", function(json) {
+        d3.json("mesoamerica-contours.geojson", function(json) {
+            feats = json.features.sort(function(a, b) {
+                return a.properties.e - b.properties.e;
+            });
             var bounds0 = d3.geo.bounds(json),
                 bounds = bounds0.map(proj),
                 xscale = width/Math.abs(bounds[1][0] - bounds[0][0]),
-                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]);
+                yscale = height/Math.abs(bounds[1][1] - bounds[0][1]),
+                eles = [];
 
             mscale = Math.min(xscale, yscale);
             proj.scale(mscale);
@@ -702,32 +706,26 @@ button.active {
                 map.attr("transform", "translate(0, " + d/2 + ")");
             }
 
-            shapes.append("svg:g").selectAll("path")
-                .data(json.features)
-                .enter().append("svg:path")
-                .attr("fill", escale(0))
-                .attr("stroke", "#222")
-                .attr("d", path);
-            d3.json("contours.geojson", function(json) {
-                feats = json.features.sort(function(a, b) {
-                    return a.properties.e - b.properties.e;
-                });
-                var eles = [];
-                $.each(json.features, function(i, d) {
-                    if(eles.length == 0 || eles[eles.length-1] != d.properties.e) {
-                        eles.push(d.properties.e);
-                    }
-                });
-                elebins.bins(eles).value(elef);
-                shapes.append("svg:g").selectAll("path")
-                    .data(feats)
-                    .enter().append("svg:path")
-                    .classed("contour", true)
-                    .attr("fill", function(d) {
-                        return escale(d.properties.e);
-                    })
-                    .attr("d", path);
+            $.each(json.features, function(i, d) {
+                if(eles.length == 0 || eles[eles.length-1] != d.properties.e) {
+                    eles.push(d.properties.e);
+                }
             });
+            elebins.bins(eles).value(elef);
+
+            shapes.append("svg:g").selectAll("path")
+                .data(feats)
+                .enter().append("svg:path")
+                .classed("contour", true)
+                .attr("stroke", function(d) {
+                    if(d.properties.e == 0) {
+                        return "#222";
+                    }
+                })
+                .attr("fill", function(d) {
+                    return escale(d.properties.e);
+                })
+                .attr("d", path);
 
             d3.json("rain-temp-ele.geojson", function(json) {
                 var descs = [];
