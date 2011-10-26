@@ -95,7 +95,7 @@ button {
   background: none;
   margin: 0;
   border: 0;
-  min-width: 80px;
+  min-width: 90px;
   color: #222;
   padding: 6px 10px 6px 10px;
   border-radius: 5px;
@@ -111,30 +111,32 @@ button.active {
     </head>
 
     <body>
-        <div id="map"></div>
+        <div style="top: 10px; left: 10px; width: 100px;">
+            <div style="font-size: larger;">
+                Welcome! Move the mouse over the histograms / heatmap to see how
+                many sites fall into that region. Click to select.
+                Click to select months to show.
+            </div>
+            <div>
+                <button class="active" id="jan">January</button>
+                <button class="inactive" id="feb">February</button>
+                <button class="inactive" id="mar">March</button>
+                <button class="inactive" id="apr">April</button>
+                <button class="inactive" id="may">May</button>
+                <button class="inactive" id="jun">June</button>
+                <button class="inactive" id="jul">July</button>
+                <button class="inactive" id="aug">August</button>
+                <button class="inactive" id="sep">September</button>
+                <button class="inactive" id="oct">October</button>
+                <button class="inactive" id="nov">November</button>
+                <button class="inactive" id="dec">December</button>
+            </div>
+        </div>
+        <div id="map" style="position: fixed; top: 10px; left: 110px;"></div>
         <div style="position: fixed; top: 10px; right: 10px;">
             <div id="graph"></div>
-            <div id="label" style="position: relative; left: 220px; height: 50px;"></div>
-            <div id="elehist" style="position: absolute; left: 50px;"></div>
-            <div style="position: absolute; right: 10px;">
-                <table><tr>
-                    <td><button class="active" id="jan">January</button></td>
-                    <td><button class="inactive" id="feb">February</button></td>
-                    <td><button class="inactive" id="mar">March</button></td>
-                    </tr><tr>
-                    <td><button class="inactive" id="apr">April</button></td>
-                    <td><button class="inactive" id="may">May</button></td>
-                    <td><button class="inactive" id="jun">June</button></td>
-                    </tr><tr>
-                    <td><button class="inactive" id="jul">July</button></td>
-                    <td><button class="inactive" id="aug">August</button></td>
-                    <td><button class="inactive" id="sep">September</button></td>
-                    </tr><tr>
-                    <td><button class="inactive" id="oct">October</button></td>
-                    <td><button class="inactive" id="nov">November</button></td>
-                    <td><button class="inactive" id="dec">December</button></td>
-                </tr></table>
-            </div>
+            <div id="elehist" style="position: relative; left: 100px;"></div>
+            <div id="label" style="font-size: larger; position: relative; left: 220px; height: 50px;"></div>
         </div>
         <script type="text/javascript">
     (function() {
@@ -143,7 +145,7 @@ button.active {
             path = d3.geo.path().projection(proj).pointRadius(1),
             margin = 25, s = 30,
             numBins = 10, sSites = new Array(), preEleSSites = [],
-            width = window.innerWidth - numBins * s - 175,
+            width = window.innerWidth - numBins * s - 285,
             height = window.innerHeight - margin,
             selectMode = -1,
             svg = d3.select("#map")
@@ -162,7 +164,7 @@ button.active {
                 .attr("transform", "translate(165,160)"),
             elegraph = d3.select("#elehist")
                 .append("svg:svg")
-                .attr("width", 200)
+                .attr("height", 150)
                 .append("svg:g")
                 .attr("transform", "translate(5,5)"),
             elebins = d3.layout.histogram(),
@@ -392,10 +394,10 @@ button.active {
                         .domain([0, d3.max(ys)])
                         .range([0, 100]);
             mkWOverlay(elegraph, elegraph, eledata, function() {
-                    this.attr("height", s/2)
-                        .attr("width", function(d) { return sscale(d.y); })
-                        .attr("x", function(d) { return 50 - sscale(d.y)/2; })
-                        .attr("y", function(d, i) { return i * s/2; });
+                    this.attr("width", s)
+                        .attr("height", function(d) { return sscale(d.y); })
+                        .attr("y", function(d) { return 100-sscale(d.y); })
+                        .attr("x", function(d, i) { return i * s; });
                     return this;
                 }, function() {
                     this.classed("hist", true)
@@ -439,7 +441,7 @@ button.active {
                         });
             });
             elegraph.append("svg:text")
-                .attr("transform", "translate(50," + (eledata.length * s/2 + 5) + ")")
+                .attr("transform", "translate(" + (eledata.length*s/2) + ",130)")
                 .attr("text-anchor", "middle")
                 .classed("axislabel", true)
                 .text(desc.name + " [" + desc.unit + "]");
@@ -447,10 +449,9 @@ button.active {
                 .append("svg:text")
                 .classed("tick", true)
                 .attr("transform", function(d, j) {
-                        return "translate(105," + j*s/2 + ")";
+                        return "translate(" + j*s + ",115)";
                     })
-                .attr("text-anchor", "start")
-                .attr("baseline-shift", "-50%")
+                .attr("text-anchor", "middle")
                 .text(function(d) { return d.x; });
         }
 
@@ -462,12 +463,12 @@ button.active {
                         .range([0, 100]);
             elegraph.selectAll("rect.hist").data(teledata)
                 .transition().duration(500)
-                .attr("width", function(d) { return sscale(d.y); })
-                .attr("x", function(d) { return 50 - sscale(d.y)/2; });
+                .attr("y", function(d) { return 100-sscale(d.y); })
+                .attr("height", function(d) { return sscale(d.y); });
             elegraph.selectAll("rect.overlay").data(teledata)
                 .transition().duration(500)
-                .attr("width", function(d) { return sscale(d.y); })
-                .attr("x", function(d) { return 50 - sscale(d.y)/2; });
+                .attr("y", function(d) { return 100-sscale(d.y); })
+                .attr("height", function(d) { return sscale(d.y); });
         }
 
         function nsort(a, b) {
