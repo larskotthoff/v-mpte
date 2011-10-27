@@ -344,8 +344,7 @@ button.active {
                         this.attr("height", s);
                         return this;
                     }, function() {
-                        this.attr("class", "hist")
-                            .attr("fill-opacity", 0.6);
+                        this.attr("class", "hist");
                     }, function() {
                         this.on("mouseout", resetLabel)
                             .on("click", function(d) {
@@ -713,16 +712,16 @@ button.active {
                             "scale": d3.scale.linear()
                                 .domain([0, 250, 375, 500, 625, 750, 1000, 1500,
                                     2000, 2500, 3500, 4500])
-                                .range(["#f00", "#ff8400", "#ffca00", "#ff9",
-                                    "#ff0", "#0f0", "#008400", "#3ff", "#00f",
-                                    "#c0c", "#609", "#006"])});
+                                .range(["#c66", "#cc9b66", "#ccb766", "#fafaf0",
+                                    "#cc6", "#6c6", "#287728", "#94dbdb",
+                                    "#66c", "#b83db8", "#6b2e8a", "#1f1f5c"])});
                 descs.push({"name": "temperature",
                             "unit": "°C",
                             "scale": d3.scale.linear()
                                 .domain([0, 5, 10, 15, 20, 25, 30])
-                                .range(["#2effde", "#b1ff5e", "#fff700",
-                                    "#fe7802", "#fd0e00", "#990100",
-                                    "#1e1e20"])});
+                                .range(["#8eddef", "#d2e6b1", "#cec863",
+                                    "#ca9368", "#e0626a", "#822732",
+                                    "#2e1f27"])});
                 descs.push({"name": "elevation",
                             "unit": "m",
                             "scale": escale});
