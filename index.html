@@ -7,37 +7,7 @@
         <script type="text/javascript" src="d3.geo.min.js"></script>
         <script type="text/javascript" src="d3.layout.min.js"></script>
         <script type="text/javascript" src="jquery-1.6.2.min.js"></script>
-        <script type="text/javascript" src="jquery.tipsy.js"></script>
         <style type="text/css"> 
-.tipsy {
-  padding: 5px;
-  position: absolute;
-  z-index: 100000;
-}
-
-.tipsy-inner {
-  padding: 5px 8px 4px 8px;
-  background-color: #000;
-  color: #eee;
-  max-width: 200px;
-  text-align: center;
-}
-
-.tipsy-inner {
-  border-radius: 3px;
-  -moz-border-radius:3px;
-  -webkit-border-radius:3px;
-}
-
-.tipsy-arrow {
-  position: absolute;
-  width: 9px;
-  height: 5px;
-}
-
-.tipsy-sw .tipsy-arrow { bottom: 0; left: 10px; }
-.tipsy-se .tipsy-arrow { bottom: 0; right: 10px; }
-
 body {
   font: 10px sans;
   background-color: #c8ebf0;
@@ -110,7 +80,7 @@ button.active {
     </head>
 
     <body>
-        <div style="top: 10px; left: 10px; height: 10%; width: 100%; height: 40px;">
+        <div style="top: 10px; left: 10px; width: 100%; height: 40px;">
             <span style="font-size: xx-large; padding-right: 20px;">Maya sites climate</span>
             <span style="position: relative; bottom: 6px;">
                 <button class="active" id="jan">January</button>
@@ -127,11 +97,19 @@ button.active {
                 <button class="inactive" id="dec">December</button>
             </span>
         </div>
-        <div id="map" style="position: fixed; top: 10%; left: 10px;"></div>
-        <div style="position: fixed; top: 10%; right: 10px;">
+        <div id="map" style="position: fixed; top: 50px; left: 10px; bottom: 50px;"></div>
+        <div style="position: fixed; top: 50px; right: 10px; bottom: 50px;">
+            <div id="label" style="font-size: larger; position: relative; left: 50px; height: 50px;"></div>
             <div id="graph"></div>
             <div id="elehist" style="position: relative; left: 100px;"></div>
-            <div id="label" style="font-size: larger; position: relative; left: 220px; height: 50px;"></div>
+        </div>
+        <div style="position: fixed; bottom: 10px; left: 10px; width: 80%;">
+            Maya sites from the <a href="http://mayagis.smv.org/index.htm">Electronic Atlas of Maya sites</a>.
+            Elevation data from <a href="http://www2.jpl.nasa.gov/srtm/">NASA</a>,
+            temperature and precipitation data from <a href="http://www.worldclim.org">WorldClim</a>.
+        </div>
+        <div style="position: fixed; bottom: 10px; right: 10px;">
+            Lars Kotthoff 2011
         </div>
         <script type="text/javascript">
     (function() {
@@ -141,7 +119,7 @@ button.active {
             margin = 25, s = 30,
             numBins = 10, sSites = new Array(), preEleSSites = [],
             width = window.innerWidth - numBins * s - 185,
-            height = window.innerHeight - margin - 40,
+            height = window.innerHeight - margin - 80,
             selectMode = -1,
             svg = d3.select("#map")
                 .append("svg:svg")
@@ -543,12 +521,12 @@ button.active {
                         return (sum/smonths.length/10).toFixed(1);
                     };
 
-            sites.selectAll("original-title")
-                .text(function(d) {
-                    return d.properties.name + ": " +
+            sites.selectAll("circle.site")
+                .on("mouseover", function(d) {
+                    glab.html(d.properties.name + ": " +
                         rainf(d) + " " + descs[0].unit + ", " +
                         tempf(d) + " " + descs[1].unit + ", " +
-                        elef(d) + " " + descs[2].unit;
+                        elef(d) + " " + descs[2].unit);
                 });
             
             var o = bin(features, rainf, tempf);
@@ -756,14 +734,7 @@ button.active {
                             return proj(d.geometry.coordinates)[1];
                         })
                     .classed("site", true)
-                    .append("original-title").text(function(d) {
-                        if(proj(d.geometry.coordinates)[0] > width/2) {
-                            $(this).parent().tipsy({gravity:'se'});
-                        } else {
-                            $(this).parent().tipsy({gravity:'sw'});
-                        }
-                        return d.properties.name;
-                    });
+                    .on("mouseout", resetLabel);
 
                 $.each([ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
                        "sep", "oct", "nov", "dec" ], function(i, m) {
