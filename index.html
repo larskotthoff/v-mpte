@@ -63,7 +63,7 @@ button {
   background: none;
   margin: 0;
   border: 0;
-  padding: 6px 10px 6px 10px;
+  padding: 3px 5px 3px 5px;
   border-radius: 5px;
 }
 
@@ -98,7 +98,7 @@ button.active {
         </div>
         <div id="map" style="position: fixed; top: 50px; left: 10px; bottom: 50px;"></div>
         <div style="position: fixed; top: 50px; right: 10px; bottom: 50px;">
-            <div id="label" style="font-size: 150%; position: relative; left: 50px; height: 50px; width: 400px;">
+            <div id="label" style="font-size: 150%; position: relative; left: 50px; height: 70px; width: 380px;">
                 Welcome!<br/>
                 Move your mouse over sites or histogram / heatmap cells to show details.
                 Click to select months or parts of histogram / heatmap to show.
@@ -119,7 +119,7 @@ button.active {
         var mscale = 1, t = [0,0],
             proj = d3.geo.mercator().scale(mscale).translate(t),
             path = d3.geo.path().projection(proj).pointRadius(1),
-            margin = 25, s = 30,
+            margin = 25, s = window.innerHeight < 800 ? 25 : 30,
             numBins = 10, sSites = new Array(), preEleSSites = [],
             width = window.innerWidth - numBins * s - 185,
             height = window.innerHeight - margin - 80,
@@ -420,7 +420,7 @@ button.active {
                         });
             });
             elegraph.append("svg:text")
-                .attr("transform", "translate(" + (eledata.length*s/2) + ",130)")
+                .attr("transform", "translate(" + (eledata.length*s/2) + ",140)")
                 .attr("text-anchor", "middle")
                 .classed("axislabel", true)
                 .text(desc.name + " [" + desc.unit + "]");
@@ -428,7 +428,8 @@ button.active {
                 .append("svg:text")
                 .classed("tick", true)
                 .attr("transform", function(d, j) {
-                        return "translate(" + j*s + ",115)";
+                        return "translate(" + j*s + ",120)" +
+                            (s < 30 ? "rotate(30)" : "");
                     })
                 .attr("text-anchor", "middle")
                 .text(function(d) { return d.x; });
