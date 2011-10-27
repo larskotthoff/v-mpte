@@ -95,7 +95,6 @@ button {
   background: none;
   margin: 0;
   border: 0;
-  min-width: 90px;
   color: #222;
   padding: 6px 10px 6px 10px;
   border-radius: 5px;
@@ -111,13 +110,9 @@ button.active {
     </head>
 
     <body>
-        <div style="top: 10px; left: 10px; width: 100px;">
-            <div style="padding-bottom: 20px; font-size: larger;">
-                Welcome! Hover over the histograms / heatmap / sites
-                to see more information. Click to select regions of the graphs
-                and months to show.
-            </div>
-            <div>
+        <div style="top: 10px; left: 10px; height: 10%; width: 100%; height: 40px;">
+            <span style="font-size: xx-large; padding-right: 20px;">Maya sites climate</span>
+            <span style="position: relative; bottom: 6px;">
                 <button class="active" id="jan">January</button>
                 <button class="inactive" id="feb">February</button>
                 <button class="inactive" id="mar">March</button>
@@ -130,10 +125,10 @@ button.active {
                 <button class="inactive" id="oct">October</button>
                 <button class="inactive" id="nov">November</button>
                 <button class="inactive" id="dec">December</button>
-            </div>
+            </span>
         </div>
-        <div id="map" style="position: fixed; top: 10px; left: 110px;"></div>
-        <div style="position: fixed; top: 10px; right: 10px;">
+        <div id="map" style="position: fixed; top: 10%; left: 10px;"></div>
+        <div style="position: fixed; top: 10%; right: 10px;">
             <div id="graph"></div>
             <div id="elehist" style="position: relative; left: 100px;"></div>
             <div id="label" style="font-size: larger; position: relative; left: 220px; height: 50px;"></div>
@@ -145,8 +140,8 @@ button.active {
             path = d3.geo.path().projection(proj).pointRadius(1),
             margin = 25, s = 30,
             numBins = 10, sSites = new Array(), preEleSSites = [],
-            width = window.innerWidth - numBins * s - 285,
-            height = window.innerHeight - margin,
+            width = window.innerWidth - numBins * s - 185,
+            height = window.innerHeight - margin - 40,
             selectMode = -1,
             svg = d3.select("#map")
                 .append("svg:svg")
