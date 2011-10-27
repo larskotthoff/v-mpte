@@ -113,7 +113,7 @@ button.active {
             href="http://www2.jpl.nasa.gov/srtm/">NASA</a>, temperature and
             precipitation data from <a
             href="http://www.worldclim.org">WorldClim</a>. Mean temperature and
-            cumulative precipitation are shown for a chosen period.
+            cumulative precipitation are shown.
         </div>
         <div style="position: fixed; bottom: 10px; right: 10px;">
             Lars Kotthoff 2011
@@ -609,7 +609,8 @@ button.active {
                                 return "translate(10,-10)";
                             } else {
                                 return "translate(" + -dc + "," +
-                                    s*numBins/2-10 + ")scale(1,-1)rotate(-90)";
+                                    (s*numBins/2-s/2) +
+                                    ")scale(1,-1)rotate(-90)";
                             }
                         });
                 me.selectAll("text.tick")
