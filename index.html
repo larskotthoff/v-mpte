@@ -107,9 +107,13 @@ button.active {
             <div id="elehist" style="position: relative; left: 100px;"></div>
         </div>
         <div style="position: fixed; bottom: 10px; left: 10px; width: 80%;">
-            Maya sites from the <a href="http://mayagis.smv.org/index.htm">Electronic Atlas of Maya sites</a>.
-            Elevation data from <a href="http://www2.jpl.nasa.gov/srtm/">NASA</a>,
-            temperature and precipitation data from <a href="http://www.worldclim.org">WorldClim</a>.
+            Maya sites from the <a
+            href="http://mayagis.smv.org/index.htm">Electronic Atlas of Maya
+            sites</a>.  Elevation data from <a
+            href="http://www2.jpl.nasa.gov/srtm/">NASA</a>, temperature and
+            precipitation data from <a
+            href="http://www.worldclim.org">WorldClim</a>. Mean temperature and
+            cumulative precipitation are shown for a chosen period.
         </div>
         <div style="position: fixed; bottom: 10px; right: 10px;">
             Lars Kotthoff 2011
@@ -604,8 +608,8 @@ button.active {
                             if(i == 0) {
                                 return "translate(10,-10)";
                             } else {
-                                return "translate(" + -dc + "," + s*numBins/2 +
-                                    ")scale(1,-1)rotate(-90)";
+                                return "translate(" + -dc + "," +
+                                    s*numBins/2-10 + ")scale(1,-1)rotate(-90)";
                             }
                         });
                 me.selectAll("text.tick")
