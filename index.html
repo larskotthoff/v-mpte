@@ -3,41 +3,39 @@
     <head>
         <title>Precipitation and average temperatures at Maya sites</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-        <script type="text/javascript" src="d3.min.js"></script>
-        <script type="text/javascript" src="d3.geo.min.js"></script>
-        <script type="text/javascript" src="d3.layout.min.js"></script>
-        <script type="text/javascript" src="jquery-1.6.2.min.js"></script>
+        <script type="text/javascript" src="../d3.min.js"></script>
+        <script type="text/javascript" src="../d3.geo.min.js"></script>
+        <script type="text/javascript" src="../d3.layout.min.js"></script>
+        <script type="text/javascript" src="../jquery-1.6.2.min.js"></script>
         <style type="text/css"> 
 body {
-  font: 10px sans;
+  font: 10px Verdana, Palatino, Helvetica, sans;
   background-color: #c8ebf0;
   text-rendering: optimizeLegibility;
 }
 text {
-  font: 10px sans;
-  fill: #222;
-  text-rendering: optimizeLegibility;
+  font-size: 10px;
 }
 text.axislabel {
-    font-weight: bold;
+  font-size: 12px;
 }
 
 rect {
   stroke-width: 0.5;
 }
 rect.hist {
-  stroke: #222;
+  stroke: #000;
 }
 rect.overlay {
   stroke: none;
   fill-opacity: 0;
 }
 rect.overlay:hover {
-  stroke: #f00;
+  stroke: #ebee62;
   stroke-width: 2;
 }
 rect.selected {
-  stroke: #f00;
+  stroke: #ebee62;
   stroke-width: 2;
 }
 
@@ -45,36 +43,35 @@ path.control:hover {
   stroke: #fff;
 }
 path.selected {
-  fill: #a00;
+  fill: #d6381b;
 }
 
 circle.site {
-  stroke: #222;
+  stroke: #000;
   stroke-width: 1;
-  fill: #222;
   shape-rendering: optimizeSpeed;
 }
 circle.site-selected {
-  stroke: #f00;
-  stroke-width: 3;
-  fill: #f00;
+  stroke: #a62114;
+  stroke-width: 2;
+  fill: #a62114;
   shape-rendering: optimizeSpeed;
 }
 
 button {
+  font: 11px Verdana, Palatino, Helvetica, sans;
   background: none;
   margin: 0;
   border: 0;
-  color: #222;
   padding: 6px 10px 6px 10px;
   border-radius: 5px;
 }
 
 button:hover {
-  background-color: #ccc;
+  background-color: #a8cbd0;
 }
 button.active {
-  background-color: #aaa;
+  background-color: #98bbc0;
 }
         </style>
     </head>
@@ -85,23 +82,23 @@ button.active {
         <div style="top: 10px; left: 10px; width: 100%; height: 40px;">
             <span style="font-size: xx-large; padding-right: 20px;">Maya sites climate</span>
             <span style="position: relative; bottom: 6px;">
-                <button class="active" id="jan">January</button>
-                <button class="inactive" id="feb">February</button>
-                <button class="inactive" id="mar">March</button>
-                <button class="inactive" id="apr">April</button>
-                <button class="inactive" id="may">May</button>
-                <button class="inactive" id="jun">June</button>
-                <button class="inactive" id="jul">July</button>
-                <button class="inactive" id="aug">August</button>
-                <button class="inactive" id="sep">September</button>
-                <button class="inactive" id="oct">October</button>
-                <button class="inactive" id="nov">November</button>
-                <button class="inactive" id="dec">December</button>
+                <button class="active" id="0">January</button>
+                <button class="inactive" id="1">February</button>
+                <button class="inactive" id="2">March</button>
+                <button class="inactive" id="3">April</button>
+                <button class="inactive" id="4">May</button>
+                <button class="inactive" id="5">June</button>
+                <button class="inactive" id="6">July</button>
+                <button class="inactive" id="7">August</button>
+                <button class="inactive" id="8">September</button>
+                <button class="inactive" id="9">October</button>
+                <button class="inactive" id="a">November</button>
+                <button class="inactive" id="b">December</button>
             </span>
         </div>
         <div id="map" style="position: fixed; top: 50px; left: 10px; bottom: 50px;"></div>
         <div style="position: fixed; top: 50px; right: 10px; bottom: 50px;">
-            <div id="label" style="font-size: larger; position: relative; left: 50px; height: 50px; width: 400px;">
+            <div id="label" style="font-size: 150%; position: relative; left: 50px; height: 50px; width: 400px;">
                 Welcome!<br/>
                 Move your mouse over sites or histogram / heatmap cells to show details.
                 Click to select months or parts of histogram / heatmap to show.
@@ -203,7 +200,7 @@ button.active {
         zoomControl(zc, -1);
 
         function elef(d) {
-            return d.properties["elevation"];
+            return d.p.e;
         }
 
         function redrawMap() {
@@ -216,7 +213,7 @@ button.active {
                 sites.selectAll("circle")
                     .attr("r", function(d) {
                             return Math.max(1, d3.event.scale/2) *
-                                Math.max(1, 4 - d.properties.rank);
+                                Math.max(1, 4 - d.p.r);
                         })
                     .attr("cx", function(d) {
                             return proj(d.geometry.coordinates)[0];
@@ -418,7 +415,7 @@ button.active {
 
                             shapes.selectAll("path.contour")
                                 .classed("selected", function(e) {
-                                    return e.properties.e == d.x;
+                                    return e.p.e == d.x;
                                 });
                         });
             });
@@ -513,21 +510,21 @@ button.active {
                 rainf = function(d) {
                         var sum = 0;
                         smonths.each(function(i, m) {
-                            sum += d.properties["rain-" + m];
+                            sum += d.p["r" + m];
                         });
                         return sum;
                     },
                 tempf = function(d) {
                         var sum = 0;
                         smonths.each(function(i, m) {
-                            sum += d.properties["temp-" + m];
+                            sum += d.p["t" + m];
                         });
                         return (sum/smonths.length/10).toFixed(1);
                     };
 
             sites.selectAll("circle.site")
                 .on("mouseover", function(d) {
-                    glab.html(d.properties.name + ": " +
+                    glab.html(d.p.n + ": " +
                         rainf(d) + " " + descs[0].unit + ", " +
                         tempf(d) + " " + descs[1].unit + ", " +
                         elef(d) + " " + descs[2].unit);
@@ -659,7 +656,7 @@ button.active {
 
         d3.json("mesoamerica-contours.geojson", function(json) {
             feats = json.features.sort(function(a, b) {
-                return a.properties.e - b.properties.e;
+                return a.p.e - b.p.e;
             });
             var bounds0 = d3.geo.bounds(json),
                 bounds = bounds0.map(proj),
@@ -685,8 +682,8 @@ button.active {
             }
 
             $.each(json.features, function(i, d) {
-                if(eles.length == 0 || eles[eles.length-1] != d.properties.e) {
-                    eles.push(d.properties.e);
+                if(eles.length == 0 || eles[eles.length-1] != d.p.e) {
+                    eles.push(d.p.e);
                 }
             });
             elebins.bins(eles).value(elef);
@@ -696,12 +693,12 @@ button.active {
                 .enter().append("svg:path")
                 .classed("contour", true)
                 .attr("stroke", function(d) {
-                    if(d.properties.e == 0) {
+                    if(d.p.e == 0) {
                         return "#222";
                     }
                 })
                 .attr("fill", function(d) {
-                    return escale(d.properties.e);
+                    return escale(d.p.e);
                 })
                 .attr("d", path);
 
@@ -729,7 +726,7 @@ button.active {
                     .data(json.features)
                     .enter().append("svg:circle")
                     .attr("r", function(d) {
-                            return Math.max(1, 4 - d.properties.rank);
+                            return Math.max(1, 4 - d.p.r);
                         })
                     .attr("cx", function(d) {
                             return proj(d.geometry.coordinates)[0];
@@ -740,9 +737,8 @@ button.active {
                     .classed("site", true)
                     .on("mouseout", resetLabel);
 
-                $.each([ "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug",
-                       "sep", "oct", "nov", "dec" ], function(i, m) {
-                    d3.select("#" + m).on("click", function() {
+                $("button").each(function(i, m) {
+                    d3.select(m).on("click", function() {
                         var t = d3.select(this);
                         if(t.attr("class") == "active") {
                             if($("button.active").length > 1) {
