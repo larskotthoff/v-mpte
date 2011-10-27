@@ -99,7 +99,11 @@ button.active {
         </div>
         <div id="map" style="position: fixed; top: 50px; left: 10px; bottom: 50px;"></div>
         <div style="position: fixed; top: 50px; right: 10px; bottom: 50px;">
-            <div id="label" style="font-size: larger; position: relative; left: 50px; height: 50px;"></div>
+            <div id="label" style="font-size: larger; position: relative; left: 50px; height: 50px; width: 400px;">
+                Welcome!<br/>
+                Move your mouse over sites or histogram / heatmap cells to show details.
+                Click to select months or parts of histogram / heatmap to show.
+            </div>
             <div id="graph"></div>
             <div id="elehist" style="position: relative; left: 100px;"></div>
         </div>
@@ -227,7 +231,6 @@ button.active {
             updateSites();
         }
         function updateSites() {
-            resetLabel();
             var sel = sites.selectAll("circle").data(sSites,
                     function(e) {
                         return e.geometry.coordinates;
