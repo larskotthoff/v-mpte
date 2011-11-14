@@ -319,20 +319,20 @@ button.active {
                     .attr("transform", function(d, i) {
                             return "translate(0," + (s * i) + ")";
                         });
-                mkWOverlay(hmrows, hmrowso, function(d) { return d; },
-                    function() {
-                        this.attr("transform", function(d, i) {
-                                    return "translate(" + (s * i) + ",0)";
-                                })
-                            .attr("width", s)
-                            .attr("height", s);
-                        return this;
-                    }, function() { }, function() {
-                        this.on("mouseout", resetLabel)
-                            .on("click", function(d) {
-                                updateSelected(this, -1, d);
-                            });
-                });
+            mkWOverlay(hmrows, hmrowso, function(d) { return d; },
+                function() {
+                    this.attr("transform", function(d, i) {
+                                return "translate(" + (s * i) + ",0)";
+                            })
+                        .attr("width", s)
+                        .attr("height", s);
+                    return this;
+                }, function() { }, function() {
+                    this.on("mouseout", resetLabel)
+                        .on("click", function(d) {
+                            updateSelected(this, -1, d);
+                        });
+            });
             // marginal distributions
             var transforms = ["translate(-35,0)",
                             "rotate(90)translate(-25,0)scale(1,-1)"],
@@ -346,7 +346,8 @@ button.active {
                                 return transforms[i];
                             });
                 mkWOverlay(me, me, m, function() {
-                        this.attr("height", s);
+                        this.attr("height", s)
+                            .attr("transform", "translate(0,0)");
                         return this;
                     }, function() {
                         this.attr("class", "hist");
@@ -361,6 +362,7 @@ button.active {
                 me.append("svg:text")
                     .attr("text-anchor", function() { return ta[i]; })
                     .classed("axislabel", true)
+                    .attr("transform", "translate(0,0)")
                     .text(descs[i].name + " [" + descs[i].unit + "]");
                 me.selectAll("text.tick").data(m + o.limits[i][2]).enter()
                     .append("svg:text")
