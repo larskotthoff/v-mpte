@@ -609,7 +609,7 @@ button.active {
                 var dc = sscale(d3.max([m[numBins/2-1].length,
                             m[numBins/2].length, m[numBins/2+1].length])) + 10;
                 me.selectAll("text.axislabel")
-                    .transition().duration(500)
+                    //.transition().duration(500)
                     .attr("transform", function() {
                             if(i == 0) {
                                 return "translate(10,-10)";
